@@ -102,6 +102,58 @@ Acesse `http://localhost:8000` para a interface principal e `http://localhost:80
 
 ---
 
+## 🐳 Rodando com Docker (Recomendado)
+
+A aplicação é totalmente conteinerizada com um **único `docker-compose.yml`** que sobe os 5 serviços: `db` (PostgreSQL), `redis` (broker), `web` (Django + gunicorn), `worker` (Celery) e `beat` (Ceifador de Zumbis).
+
+### Pré-requisitos
+* [Docker](https://docs.docker.com/engine/install/) + [Docker Compose](https://docs.docker.com/compose/install/) (ou Docker Desktop)
+
+### 1. Configurar o ambiente
+```bash
+cp .env.example .env
+# Preencha OPENAI_API_KEY (e ajuste APP_ENV, credenciais e limites)
+```
+
+### 2. Subir a stack
+```bash
+docker compose up --build
+# Em segundo plano:
+docker compose up -d --build
+```
+
+### 3. Acessar
+* Interface: http://localhost:8000
+* Admin: http://localhost:8000/admin (superusuário `admin` / `admin123`, criado pelo seeder)
+
+### Controlando desenvolvimento vs produção
+Um único compose atende os dois ambientes via `.env`:
+
+| Variável | `development` | `production` |
+|---|---|---|
+| `APP_ENV` | `development` | `production` |
+| `DEBUG` | `true` | `false` |
+| `SECRET_KEY` | qualquer valor | valor forte secreto |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | domínio(s) real(is) |
+
+> O modo `development` é **fiel a produção**: também usa PostgreSQL + Redis reais e worker/beat separados, para que o loop agêntico seja testado de verdade. A diferença para `production` é apenas o `DEBUG`.
+
+### Comportamentos automáticos
+* **Migrações:** `python manage.py migrate` roda no start do `web`.
+* **Seeder:** `python manage.py seed_profiles` roda no start (idempotente — cria os 9 perfis e o admin, sem resetar senha de admin existente).
+* **Estáticos:** `collectstatic` + **WhiteNoise** servem os assets do admin sem nginx extra.
+
+### Comandos úteis
+```bash
+docker compose logs -f web      # logs do servidor
+docker compose logs -f worker   # logs do loop agêntico
+docker compose ps               # status dos serviços
+docker compose down             # derruba a stack
+docker compose down -v          # derruba e apaga volumes (dados)
+```
+
+---
+
 ## 🧪 Suíte de Testes
 
 O projeto adota a política de **Zero Network** na esteira de testes. Nenhuma requisição real é feita a provedores de LLM durante os testes automatizados, garantindo 100% de determinismo.

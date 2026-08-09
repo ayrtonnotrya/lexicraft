@@ -1,0 +1,139 @@
+# ---------------------------------------------------------------------------
+# LexiCraft — docker-compose único (desenvolvimento e produção)
+#
+# Um único compose, controlado por variáveis de ambiente:
+#   APP_ENV=development  -> DEBUG=True  (fiel a produção: Postgres + Redis + worker/beat reais)
+#   APP_ENV=production   -> DEBUG=False
+#
+# As variáveis são resolvidas via ${VAR:-default} (sem env_file, compatível
+# com o Portainer):
+#   - Deploy no Portainer: preencha as variáveis no painel "Environment
+#     variables" da stack (APP_ENV, SECRET_KEY, OPENAI_API_KEY, POSTGRES_*...).
+#   - Rodando localmente: o docker compose carrega automaticamente o arquivo
+#     .env da raiz do projeto para a mesma interpolação.
+#
+# Rede: os serviços se comunicam na rede bridge default do projeto. O serviço
+# `web` também ingressa numa rede externa (`nginx-proxy`, reverse proxy) para
+# exposição via domínio/TLS — por isso não publica porta. A rede externa deve
+# existir: docker network create nginx-proxy (nome configurável em PROXY_NETWORK).
+#
+# Uso:
+#   docker compose up --build
+#   docker compose up -d --build   (em segundo plano)
+# ---------------------------------------------------------------------------
+
+x-app-env: &app-env
+  DJANGO_SETTINGS_MODULE: config.settings.production
+  APP_ENV: ${APP_ENV:-production}
+  DEBUG: ${DEBUG:-false}
+  SECRET_KEY: ${SECRET_KEY:-insecure-dev-key-change-me}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+  # Banco (base.py lê POSTGRES_*, não DATABASE_URL)
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${POSTGRES_DB:-lexicraft}
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  # Broker / result backend
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+  # LLM / OpenCode Go
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://opencode.ai/zen/go/v1}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENCODE_MODELS_URL: ${OPENCODE_MODELS_URL:-https://opencode.ai/zen/go/v1/models}
+  DEFAULT_MODEL_NAME: ${DEFAULT_MODEL_NAME:-deepseek-v4-flash}
+  LLM_TEMPERATURE: ${LLM_TEMPERATURE:-1.0}
+  # Custos e limites
+  COST_PER_1M_PROMPT_TOKENS: ${COST_PER_1M_PROMPT_TOKENS:-0.15}
+  COST_PER_1M_COMPLETION_TOKENS: ${COST_PER_1M_COMPLETION_TOKENS:-0.60}
+  MAX_BUDGET_USD_PER_TASK: ${MAX_BUDGET_USD_PER_TASK:-2.50}
+  MAX_TIME_SECONDS_PER_TASK: ${MAX_TIME_SECONDS_PER_TASK:-300}
+  MAX_ITERATIONS_PER_TASK: ${MAX_ITERATIONS_PER_TASK:-3}
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lexicraft}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-lexicraft}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py seed_profiles &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_WORKERS:-3}"
+    environment:
+      <<: *app-env
+    networks:
+      - default
+      - web
+    volumes:
+      - staticdata:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: sh -c "python manage.py migrate --noinput && celery -A config worker --loglevel=${CELERY_LOGLEVEL:-info}"
+    environment: *app-env
+    networks:
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    restart: unless-stopped
+    command: sh -c "python manage.py migrate --noinput && celery -A config beat --loglevel=${CELERY_LOGLEVEL:-info} --schedule /data/celerybeat-schedule"
+    environment: *app-env
+    networks:
+      - default
+    volumes:
+      - beatdata:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+networks:
+  web:
+    external: true
+
+volumes:
+  pgdata:
+  redisdata:
+  beatdata:
+  staticdata:

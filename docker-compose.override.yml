@@ -29,7 +29,7 @@ services:
       - "8000:8000"
 
   worker:
-    command: sh -c "python manage.py migrate --noinput && celery -A config worker --loglevel=${CELERY_LOGLEVEL:-info} --autoreload"
+    command: sh -c "python manage.py migrate --noinput && celery -A config worker --loglevel=${CELERY_LOGLEVEL:-info}"
     volumes:
       - ./:/app
 

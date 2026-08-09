@@ -284,7 +284,6 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
 
     model = task_execution.model_name or profile.model_name or settings.DEFAULT_MODEL_NAME
     target = float(settings.NASH_TARGET_SCORE)
-    epsilon = float(settings.NASH_EPSILON)
 
     previous_score: float | None = None
     previous_text: str | None = None
@@ -450,31 +449,27 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
             _finalize_completed(task_execution, snapshot)
             return
 
-        # 2. Degradação Sumária (Delta W < 0) — Rollback imediato, sem retentativa.
-        if delta_w is not None and delta_w < 0:
-            _set_step(task_execution, f"Degradação sumária detectada (ΔW={delta_w}). Executando Rollback.")
-            _rollback(task_execution)
-            return
-
-        # 3. Estouro de Isocusto (C_max).
+        # 2. Estouro de Isocusto (C_max).
         if Decimal(task_execution.accumulated_cost_usd) >= task_execution.max_budget_usd:
             _set_step(task_execution, "Orçamento excedido (C_max). Executando Rollback.")
             _rollback(task_execution)
             return
 
-        # 4. Estagnação (0 <= Delta W < Epsilon) — Rollback.
-        if delta_w is not None and delta_w < epsilon:
-            _set_step(task_execution, f"Estagnação detectada (ΔW={delta_w} < ε={epsilon}). Executando Rollback.")
-            _rollback(task_execution)
-            return
-
-        # 5. Estouro de Tempo (T_max).
+        # 3. Estouro de Tempo (T_max).
         if _time_budget_exceeded(task_execution):
             _set_step(task_execution, "Tempo limite excedido (T_max). Executando Rollback.")
             _rollback(task_execution)
             return
 
-        # 6. Limite de Ciclos (N_max).
+        # 4. Limite de Ciclos (N_max): esgota o número de tentativas configurado,
+        #    mantendo a melhor versão (Rollback) caso a nota não tenha convergido.
+        if iteration >= max_iterations:
+            if delta_w is not None:
+                _set_step(task_execution, f"Limite de iterações atingido (N_max). ΔW={delta_w}. Executando Rollback.")
+            else:
+                _set_step(task_execution, "Limite de iterações atingido (N_max). Executando Rollback.")
+            _rollback(task_execution)
+            return
         if iteration >= max_iterations:
             _set_step(task_execution, "Limite de iterações atingido (N_max). Executando Rollback.")
             _rollback(task_execution)

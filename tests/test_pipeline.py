@@ -178,20 +178,23 @@ def test_cenario_f_estagnacao_epsilon(mock_writer, mock_guardrail, mock_auditor,
     mock_writer.return_value = writer_result()
     mock_guardrail.return_value = _approved()
     # Ciclo 1: W=0.85 (ded 15). Ciclo 2: W=0.86 (ded 14). Delta = 0.01 < 0.02.
+    # Mesmo com estagnação, o loop segue até N_max (3), nunca convergindo.
     aud85 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 15.0, 2: 15.0}))
     aud86 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 14.0, 2: 14.0}))
-    mock_auditor.side_effect = [aud85, aud85, aud86, aud86]
+    mock_auditor.side_effect = [aud85, aud85, aud86, aud86, aud85, aud85]
 
     run_optimization_pipeline(task.id)
 
     task.refresh_from_db()
     assert task.status == TaskStatus.COMPLETED_WITH_ROLLBACK
+    # Esgotou as 3 iterações configuradas.
+    assert task.snapshots.count() == 3
     # Melhor versão registrada é a do Ciclo 2 (0.86).
     assert task.final_score == pytest.approx(0.86, abs=1e-6)
 
 
 # ---------------------------------------------------------------------------
-# Cenário G: Degradação Súbita (Delta W < 0) com Rollback Imediato
+# Cenário G: Degradação Súbita (Delta W < 0) não aborta; segue até N_max
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db(transaction=True)
 @patch(PATCH_AUDITOR)
@@ -199,19 +202,25 @@ def test_cenario_f_estagnacao_epsilon(mock_writer, mock_guardrail, mock_auditor,
 @patch(PATCH_WRITER)
 def test_cenario_g_degradacao_sumaria(mock_writer, mock_guardrail, mock_auditor, task_execution_factory):
     task = task_execution_factory(max_iterations=3)
-    mock_writer.side_effect = [writer_result(generated_text="versão 1"), writer_result(generated_text="versão 2")]
+    mock_writer.side_effect = [
+        writer_result(generated_text="versão 1"),
+        writer_result(generated_text="versão 2"),
+        writer_result(generated_text="versão 3"),
+    ]
     mock_guardrail.return_value = _approved()
     # Ciclo 1: W=0.82 (ded 18). Ciclo 2: W=0.74 (ded 26). Delta = -0.08.
+    # Ciclo 3: W=0.76 (ded 24). Melhor continua sendo o Ciclo 1.
     aud82 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 18.0, 2: 18.0}))
     aud74 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 26.0, 2: 26.0}))
-    mock_auditor.side_effect = [aud82, aud82, aud74, aud74]
+    aud76 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 24.0, 2: 24.0}))
+    mock_auditor.side_effect = [aud82, aud82, aud74, aud74, aud76, aud76]
 
     run_optimization_pipeline(task.id)
 
     task.refresh_from_db()
     assert task.status == TaskStatus.COMPLETED_WITH_ROLLBACK
-    # Sem Ciclo 3: exatamente 2 snapshots foram gravados.
-    assert task.snapshots.count() == 2
+    # Mesmo com degradação, esgotou as 3 iterações configuradas.
+    assert task.snapshots.count() == 3
     # Rollback para a melhor versão (Ciclo 1, W=0.82).
     assert task.final_score == pytest.approx(0.82, abs=1e-6)
     assert task.final_text == "versão 1"

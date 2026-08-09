@@ -23,7 +23,6 @@ async def call_guardrail_agent(
     Retorna um dict com `parsed_payload`, `prompt_tokens`, `completion_tokens`
     e `total_tokens`.
     """
-    client = get_async_client()
     base_prompt = build_guardrail_prompt(system_prompt)
     # JSON Schema injetado também garante que o prompt contenha "json", requisito
     # do provedor para o modo response_format=json_object.
@@ -34,23 +33,26 @@ async def call_guardrail_agent(
         f"exatamente este schema:\n{schema_json}"
     )
 
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": full_system_prompt},
-            {
-                "role": "user",
-                "content": (
-                    f"<user_input>\n{original_prompt}\n</user_input>\n\n"
-                    f"<generated_text>\n{generated_text}\n</generated_text>"
-                ),
-            },
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.0,
-    )
+    # Fechamento explícito do client evita o RuntimeError('Event loop is closed')
+    # ao final de `asyncio.run()`.
+    async with get_async_client() as client:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": full_system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"<user_input>\n{original_prompt}\n</user_input>\n\n"
+                        f"<generated_text>\n{generated_text}\n</generated_text>"
+                    ),
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0,
+        )
+        content = response.choices[0].message.content
 
-    content = response.choices[0].message.content
     parsed = GuardrailResponseSchema.model_validate_json(content)
     usage = build_usage_dict(response.usage)
 

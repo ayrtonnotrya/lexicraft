@@ -24,7 +24,6 @@ async def call_writer_agent(
     Retorna um dict com `parsed_payload`, `prompt_tokens`, `completion_tokens`
     e `total_tokens`, pronto para alimentar o contador de Isocusto.
     """
-    client = get_async_client()
     base_prompt = build_writer_prompt(
         system_content=system_prompt,
         original_prompt=original_prompt,
@@ -41,17 +40,21 @@ async def call_writer_agent(
         f"exatamente este schema, sem markdown e sem textos extras:\n{schema_json}"
     )
 
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": full_system_prompt},
-            {"role": "user", "content": f"<user_input>\n{original_prompt}\n</user_input>"},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.7,
-    )
+    # Bloco `async with` garante o fechamento explícito do AsyncOpenAI (e do
+    # httpx.AsyncClient subjacente) antes que o event loop seja encerrado por
+    # `asyncio.run()`, eliminando o RuntimeError('Event loop is closed').
+    async with get_async_client() as client:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": full_system_prompt},
+                {"role": "user", "content": f"<user_input>\n{original_prompt}\n</user_input>"},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+        )
+        content = response.choices[0].message.content
 
-    content = response.choices[0].message.content
     parsed = WriterResponseSchema.model_validate_json(content)
     usage = build_usage_dict(response.usage)
 

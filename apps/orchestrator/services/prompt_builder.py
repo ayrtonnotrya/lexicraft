@@ -15,18 +15,64 @@ def build_writer_prompt(
     previous_text: str | None = None,
     violations_report: str | None = None,
 ) -> str:
-    """Monta o prompt de sistema do Agente Redator, incluindo histórico opcional."""
+    """Monta o prompt de sistema do Agente Redator, incluindo histórico opcional.
+
+    Um bloco universal de FIDELIDADE é sempre anexado, independente do perfil,
+    para combater a tendência do LLM de inventar dados e alterar o registro
+    (pedido->decisão, incerteza->certeza) em todas as gerações.
+    """
     parts = [system_content]
     if previous_text:
         parts.append(f"<previous_version>\n{previous_text}\n</previous_version>")
     if violations_report:
         parts.append(f"<infractions>\n{violations_report}\n</infractions>")
+    parts.append(
+        "=== FIDELIDADE ABSOLUTA AO ORIGINAL (OBRIGATÓRIO, EM TODAS AS GERAÇÕES) ===\n"
+        "O <user_input> é a FONTE ÚNICA da verdade. Ao reescrever ou otimizar o texto:\n"
+        "1. NUNCA invente fatos, dados, números, nomes, prazos, horários, "
+        "valores, códigos ou decisões que não constem literalmente no original.\n"
+        "2. Preserve o REGISTRO do original: se ele é um pedido/consulta, "
+        "continue sendo um pedido/consulta; não o converta em decisão tomada "
+        "nem em instrução. Ex.: não troque 'peço que possamos rodar' por "
+        "'vamos rodar' nem 'precisamos rodar'.\n"
+        "3. Preserve INCERTEZAS e vagueza do original ('provavelmente', "
+        "'à tarde', 'ainda preciso analisar', 'em algum momento') — NÃO as "
+        "torne definitivas: não adicione 'hoje', datas, horas ou certezas "
+        "que não existam no original.\n"
+        "4. Não altere o significado nem a intenção de quem fala; apenas "
+        "melhore clareza, estrutura, concisão e fluência.\n"
+        "5. Em caso de dúvida, mantenha-se o mais próximo possível da "
+        "formulação original — nunca preencha lacunas com suposições."
+    )
     return "\n\n".join(p for p in parts if p)
 
 
 def build_guardrail_prompt(system_content: str) -> str:
-    """Prompt de sistema do Guard-rail (a diretriz base já define fidelidade/escopo)."""
-    return system_content
+    """Prompt de sistema do Guard-rail com contrato de saída explícito.
+
+    A diretriz base (do banco) define fidelidade/escopo; aqui reforçamos o
+    contrato JSON para o modelo não ecoar o schema nem responder em prosa,
+    o que geraria ValidationError e consumiria 1 Strike à toa.
+    """
+    return (
+        f"{system_content}\n\n"
+        f"=== FORMATO DE SAÍDA (OBRIGATÓRIO) ===\n"
+        f"Responda com UM ÚNICO objeto JSON válido — NUNCA repita o schema, "
+        f"nunca use markdown, nunca acrescente texto fora do JSON. O objeto "
+        f"deve conter EXATAMENTE estes três campos:\n"
+        f"  1. \"reasoning\": string — sua análise comparando o texto gerado "
+        f"com o prompt original (fidelidade de fatos, prazos, valores, nomes "
+        f"e escopo).\n"
+        f"  2. \"is_approved\": booleano — true APENAS se o texto é fiel, "
+        f"factual e escopado ao original; false se houver QUALQUER alucinação, "
+        f"invenção de dados, prazo/valor/numero novo ou fuga de escopo.\n"
+        f"  3. \"feedback_for_writer\": string — OBRIGATÓRIO quando "
+        f"is_approved for false; diga exatamente o que corrigir e cite os "
+        f"trechos inventados. Pode ser null apenas quando aprovado.\n"
+        f"Exemplo da forma do JSON (valores ilustrativos):\n"
+        + '{"reasoning": "...", "is_approved": false, '
+          '"feedback_for_writer": "Remova o prazo às 12h inventado..."}'
+    )
 
 
 def build_auditor_prompt(

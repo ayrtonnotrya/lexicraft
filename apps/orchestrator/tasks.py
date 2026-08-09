@@ -306,7 +306,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
         # + Tribunal. Cada tentativa é um "pass completo".
         # ------------------------------------------------------------------
         strikes = 0
-        feedback: str | None = None
+        retry_feedback: str | None = None
         generated_text: str | None = None
         mean_deductions = None
         active_types = None
@@ -322,10 +322,20 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
 
             try:
                 # 1. Redator (falha de rede/schema/contrato = Strike, AGENTS.md 5.B).
+                # Na 2ª/3ª tentativa da MESMA iteração, devolve ao Redator o
+                # feedback acumulado do Guard-rail para ele corrigir o erro
+                # (fonte: AGENTS.md 5.B — "devolve o feedback do Guard-rail ao
+                # Redator para retentativa"). O violations_report do tribunal
+                # continua sendo o histórico da iteração ANTERIOR.
+                writer_feedback = (
+                    retry_feedback
+                    if attempt > 1
+                    else (violations_report if iteration > 1 else None)
+                )
                 writer_payload, pt, ct = asyncio.run(_call_writer(
                     task_execution, writer_prompt, task_execution.original_prompt, model,
                     previous_text if iteration > 1 else None,
-                    violations_report if iteration > 1 else None,
+                    writer_feedback,
                 ))
                 _accumulate(task_execution, pt, ct)
                 generated_text = writer_payload.generated_text
@@ -341,7 +351,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
                 # BadRequestError 400 de temperatura/parâmetros incompatíveis).
                 strikes += 1
                 reason = type(exc).__name__
-                feedback = f"Erro de infraestrutura ({reason}): {exc}"
+                retry_feedback = f"Erro de infraestrutura ({reason}): {exc}"
                 _set_step(
                     task_execution,
                     f"Redator/Guard-rail (Tentativa {attempt}/3) — Timeout de rede / falha de infraestrutura ({reason})",
@@ -354,7 +364,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
             if not guardrail_payload.is_approved:
                 # Reprovação semântica: consome Strike e devolve feedback ao Redator.
                 strikes += 1
-                feedback = guardrail_payload.feedback_for_writer or "Reescreva corrigindo as falhas apontadas."
+                retry_feedback = guardrail_payload.feedback_for_writer or "Reescreva corrigindo as falhas apontadas."
                 _set_step(task_execution, f"Guard-rail (Tentativa {attempt}/3) — Reprovado (Strike {strikes}/3)")
                 if strikes >= MAX_GUARDRAIL_ATTEMPTS:
                     _abort_guardrail(task_execution, "fuga de escopo")
@@ -377,7 +387,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
             except Exception as exc:  # noqa: BLE001
                 strikes += 1
                 reason = type(exc).__name__
-                feedback = f"Erro no Tribunal ({reason}): {exc}"
+                retry_feedback = f"Erro no Tribunal ({reason}): {exc}"
                 _set_step(task_execution, f"Guard-rail (Tentativa {attempt}/3) — Erro de Schema/Infra ({reason})")
                 if strikes >= MAX_GUARDRAIL_ATTEMPTS:
                     _abort_guardrail(task_execution, f"Erro de Schema/Infra no Tribunal ({reason})")

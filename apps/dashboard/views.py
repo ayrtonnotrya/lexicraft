@@ -124,7 +124,7 @@ def start_task(request: HttpRequest) -> HttpResponse:
     )
     if existing is not None:
         # Dedup calculado: reaproveita a task em curso em vez de bifurcar.
-        return redirect('task_detail', task_id=existing.id)
+        return redirect('dashboard:task_detail', task_id=existing.id)
 
     task = TaskExecution.objects.create(
         user=request.user,
@@ -137,7 +137,7 @@ def start_task(request: HttpRequest) -> HttpResponse:
         max_time_seconds=profile.default_max_time_seconds,
     )
     run_optimization_pipeline.delay(task.id)
-    return redirect('task_detail', task_id=task.id)
+    return redirect('dashboard:task_detail', task_id=task.id)
 
 
 @login_required
@@ -212,4 +212,4 @@ def cancel_task(request: HttpRequest, task_id: int) -> HttpResponse:
         return render(request, 'partials/task_progress.html', {
             'task': task, 'is_stale': False, 'axes_by_id': axes_by_id,
         })
-    return redirect('task_detail', task_id=task_id)
+    return redirect('dashboard:task_detail', task_id=task_id)

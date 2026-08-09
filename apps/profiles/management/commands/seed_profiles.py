@@ -1,5 +1,6 @@
-"""Management Command idempotente que povoa o banco com 3 Perfis de Geração
-out-of-the-box (E-mail Corporativo, Carta de Amor, Ensaio Acadêmico).
+"""Management Command idempotente que povoa o banco com 9 Perfis de Geração
+out-of-the-box (E-mail Corporativo, Carta de Amor, Ensaio Acadêmico, ... e
+Engenheiro de Prompts Sênior).
 
 Garante idempotência via ``update_or_create``/``get_or_create`` em todo o
 gráfico de objetos (ProfileConfig -> QualityAxis + SystemPrompt), de modo que
@@ -8,17 +9,21 @@ re-executar o comando jamais duplica registros nem quebra constraints.
 Uso:
     python manage.py seed_profiles
 """
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from apps.core.choices import PromptRole
 from apps.profiles.models import ProfileConfig, QualityAxis, SystemPrompt
 
+User = get_user_model()
+
 
 class Command(BaseCommand):
     help = (
-        "Cria (ou atualiza) 3 Perfis de Geração out-of-the-box com seus "
+        "Cria (ou atualiza) 9 Perfis de Geração out-of-the-box com seus "
         "Eixos de Qualidade e Prompts de Sistema: E-mail Corporativo, "
-        "Carta de Amor e Trabalho de Escola (Ensaio Acadêmico)."
+        "Carta de Amor, Trabalho de Escola (Ensaio Acadêmico), ... e "
+        "Engenheiro de Prompts Sênior (Meta-Prompting)."
     )
 
     # ------------------------------------------------------------------ #
@@ -455,6 +460,126 @@ class Command(BaseCommand):
                 ),
             },
         },
+        # ================================================================ #
+        #  Perfil 9 — Engenheiro de Prompts Sênior (Meta-Prompting)        #
+        # ================================================================ #
+        {
+            "name": "Engenheiro de Prompts Sênior (Meta-Prompting)",
+            "description": (
+                "Transforma ideias simples do usuário em prompts ou "
+                "meta-prompts arquitetonicamente perfeitos, prontos para "
+                "orquestrar IAs com alto determinismo."
+            ),
+            "axes": [
+                {
+                    "name": "Delimitação e Estrutura",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DELIMITAÇÃO e a ESTRUTURA do prompt. "
+                        "Deduza 25 a 30 pontos se não houver uso claro de "
+                        "delimitadores estruturais (como tags XML, "
+                        "<regras>, <input>) para separar diretrizes de "
+                        "dados variáveis. Deduza mais 15 a 20 pontos se a "
+                        "hierarquia da informação for confusa."
+                    ),
+                },
+                {
+                    "name": "Restrições Negativas (Fronteiras)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie as RESTRIÇÕES NEGATIVAS (FRONTEIRAS) do "
+                        "prompt. Deduza 30 a 40 pontos se o prompt não "
+                        "disser o que a IA está PROIBIDA de fazer (ex: "
+                        "'Não invente fatos', 'Não use jargões'). Um bom "
+                        "meta-prompt deve ser paranoico contra alucinações."
+                    ),
+                },
+                {
+                    "name": "Definição Estrita de Saída (Output)",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DEFINIÇÃO ESTRITA DE SAÍDA (OUTPUT). "
+                        "Deduza 40 a 50 pontos se o prompt terminar de "
+                        "forma vaga (ex: 'Escreva sobre isso'). O prompt "
+                        "gerado DEVE instruir rigorosamente como a resposta "
+                        "final deve se parecer fisicamente (ex: formato "
+                        "JSON, Markdown, tabela, número de parágrafos)."
+                    ),
+                },
+                {
+                    "name": "Calibragem de Persona e Contexto",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a CALIBRAGEM DE PERSONA E CONTEXTO. "
+                        "Deduza 20 a 25 pontos se o prompt não definir "
+                        "claramente 'Quem' a IA deve ser (persona, "
+                        "senioridade, tom de voz) ou para qual contexto "
+                        "o output servirá."
+                    ),
+                },
+                {
+                    "name": "Estímulo de Raciocínio (Chain-of-Thought)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie o ESTÍMULO DE RACIOCÍNIO "
+                        "(CHAIN-OF-THOUGHT). Deduza 25 a 35 pontos se o "
+                        "prompt pedir a resposta direta sem instruir a IA "
+                        "a pensar passo a passo (Chain-of-Thought) ou "
+                        "analisar o problema antes de dar o resultado final."
+                    ),
+                },
+            ],
+            "prompts": {
+                PromptRole.WRITER: (
+                    "Você é um Engenheiro de IA (Prompt Engineer) Nível "
+                    "Staff. Sua missão é transformar a ideia simples do "
+                    "usuário (fornecida em <user_input>) no melhor "
+                    "Meta-Prompt possível. Um prompt perfeito DEVE conter, "
+                    "obrigatoriamente, os 5 blocos: 1. Persona/Contexto, "
+                    "2. Instruções Claras e Ordenadas, 3. Restrições "
+                    "Negativas (o que a IA está PROIBIDA de fazer), 4. "
+                    "Formato de Saída estrito (como a resposta final deve "
+                    "se parecer fisicamente) e 5. Estímulo de Raciocínio "
+                    "(instruir a IA a analisar/raciocinar passo a passo "
+                    "antes de dar o resultado final). Use delimitadores XML "
+                    "(ex.: <persona>, <contexto>, <instrucoes>, "
+                    "<restricoes_negativas>, <formato_de_saida>) para "
+                    "estruturar a saída, de modo que o usuário possa apenas "
+                    "copiar o seu prompt e usar em qualquer LLM. Não "
+                    "entregue 'resposta pronta': o texto final deve ser uma "
+                    "INSTRUÇÃO DE SISTEMA para que uma OUTRA IA responda."
+                ),
+                PromptRole.GUARDRAIL: (
+                    "Compare o prompt gerado com o desejo original do "
+                    "usuário em <user_input>. REPROVE (is_approved: false) "
+                    "imediatamente se o texto gerado estiver 'respondendo "
+                    "à pergunta' do usuário, em vez de ser uma INSTRUÇÃO "
+                    "DE SISTEMA (um prompt) para que uma outra IA responda "
+                    "a pergunta. Garanta que o escopo pedido foi coberto."
+                ),
+                PromptRole.AUDITOR: (
+                    "Você é um pesquisador especialista em Modelos "
+                    "Fundacionais (LLMs). Você não tem pena de prompts "
+                    "amadores. Avalie o Meta-Prompt gerado PERCORRENDO, um "
+                    "a um, os 5 Eixos: 1. Delimitação e Estrutura, 2. "
+                    "Restrições Negativas, 3. Definição Estrita de Saída, "
+                    "4. Calibragem de Persona e Contexto, 5. Estímulo de "
+                    "Raciocínio. Para cada eixo, CITE o trecho do prompt "
+                    "que atende ou viola a régua e deduza a QUANTIDADE "
+                    "ABSOLUTA indicada na régua. Você sabe que prompts sem "
+                    "delimitadores, sem restrições negativas, sem formato "
+                    "de saída estrito e sem estímulo de raciocínio causam "
+                    "alucinações. Pontue o texto friamente, deponha contra "
+                    "falhas arquiteturais e DIGA ao Redator como consertar "
+                    "cada eixo falho."
+                ),
+            },
+        },
     ]
 
     # ------------------------------------------------------------------ #
@@ -499,6 +624,50 @@ class Command(BaseCommand):
                 f"{created_profiles + updated_profiles}."
             )
         )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Confirmada a criação de todos os 9 perfis do LexiCraft: "
+                "E-mail Corporativo, Carta de Amor, Trabalho de Escola "
+                "(Ensaio Acadêmico), ... e Engenheiro de Prompts Sênior "
+                "(Meta-Prompting) — todos idempotentes e prontos para uso."
+            )
+        )
+
+        self._sync_superuser()
+
+    def _sync_superuser(self) -> None:
+        """Cria (idempotentemente) o superusuário admin padrão do projeto.
+
+        Usa ``get_or_create`` com a flag ``is_superuser``/``is_staff``, de
+        modo que re-executar o comando jamais reseta a senha de um admin
+        que já existe no banco.
+        """
+        username = "admin"
+        password = "admin123"
+        user, was_created = User.objects.get_or_create(
+            username=username,
+            defaults={
+                "is_staff": True,
+                "is_superuser": True,
+                "is_active": True,
+            },
+        )
+        if was_created:
+            user.set_password(password)
+            user.save()
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"[CRIADO]  Superusuário padrão: {username}/{password}."
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"[ATUALIZ.] Superusuário {username} já existe; senha "
+                    "preservada."
+                )
+            )
 
     # ------------------------------------------------------------------ #
     #  Helpers de sincronização do grafo                                 #

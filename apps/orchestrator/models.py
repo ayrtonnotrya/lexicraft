@@ -25,6 +25,17 @@ class TaskExecution(TimeStampedModel):
         max_length=50, choices=TaskStatus.choices, default=TaskStatus.PENDING
     )
 
+    # Modelo de LLM escolhido no momento da criação. É um snapshot desacoplado
+    # do perfil: o usuário pode escolher qualquer modelo do catálogo, e a task
+    # roda sempre com este valor (nunca com o default do perfil). Fallback:
+    # quando o form não envia modelo, usa o model_name do perfil.
+    model_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="ID do modelo escolhido para esta execução (desacoplado do perfil).",
+    )
+
     # Entradas e Progresso
     original_prompt = models.TextField(help_text="Mensagem inicial do usuário")
     current_iteration = models.PositiveSmallIntegerField(default=1)

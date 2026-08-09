@@ -282,7 +282,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
     guardrail_prompt = prompts.get(PromptRole.GUARDRAIL, 'Audite fidelidade e escopo.')
     auditor_prompt = prompts.get(PromptRole.AUDITOR, 'Você é um corretor rigoroso.')
 
-    model = profile.model_name or settings.DEFAULT_MODEL_NAME
+    model = task_execution.model_name or profile.model_name or settings.DEFAULT_MODEL_NAME
     target = float(settings.NASH_TARGET_SCORE)
     epsilon = float(settings.NASH_EPSILON)
 
@@ -320,30 +320,31 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
 
             _set_step(task_execution, f"Executando Redator (Iteração {iteration}, Tentativa {attempt}/3)")
 
-            # 1. Redator
-            writer_payload, pt, ct = asyncio.run(_call_writer(
-                task_execution, writer_prompt, task_execution.original_prompt, model,
-                previous_text if iteration > 1 else None,
-                violations_report if iteration > 1 else None,
-            ))
-            _accumulate(task_execution, pt, ct)
-            generated_text = writer_payload.generated_text
-
-            # 2. Guard-rail (reprovação semântica, rede ou schema = Strike)
-            _set_step(task_execution, f"Executando Guard-rail (Tentativa {attempt}/3)")
             try:
+                # 1. Redator (falha de rede/schema/contrato = Strike, AGENTS.md 5.B).
+                writer_payload, pt, ct = asyncio.run(_call_writer(
+                    task_execution, writer_prompt, task_execution.original_prompt, model,
+                    previous_text if iteration > 1 else None,
+                    violations_report if iteration > 1 else None,
+                ))
+                _accumulate(task_execution, pt, ct)
+                generated_text = writer_payload.generated_text
+
+                # 2. Guard-rail (reprovação semântica, rede ou schema = Strike)
+                _set_step(task_execution, f"Executando Guard-rail (Tentativa {attempt}/3)")
                 guardrail_payload, pt, ct = asyncio.run(_call_guardrail(
                     task_execution, guardrail_prompt, task_execution.original_prompt, generated_text, model,
                 ))
                 _accumulate(task_execution, pt, ct)
             except Exception as exc:  # noqa: BLE001
-                # Falha de infraestrutura (TimeoutException, ConnectError, 429/500).
+                # Falha de infraestrutura (TimeoutException, ConnectError, 429/500,
+                # BadRequestError 400 de temperatura/parâmetros incompatíveis).
                 strikes += 1
                 reason = type(exc).__name__
                 feedback = f"Erro de infraestrutura ({reason}): {exc}"
                 _set_step(
                     task_execution,
-                    f"Guard-rail (Tentativa {attempt}/3) — Timeout de rede / falha de infraestrutura ({reason})",
+                    f"Redator/Guard-rail (Tentativa {attempt}/3) — Timeout de rede / falha de infraestrutura ({reason})",
                 )
                 if strikes >= MAX_GUARDRAIL_ATTEMPTS:
                     _abort_guardrail(task_execution, "infraestrutura (rede)")

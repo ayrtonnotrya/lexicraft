@@ -9,6 +9,7 @@ parciais sem o header é bloqueado com 400.
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -17,6 +18,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.orchestrator.models import TaskExecution
+from apps.orchestrator.services.model_catalog import fetch_available_models
 from apps.orchestrator.tasks import reap_zombie_tasks, run_optimization_pipeline
 from apps.profiles.models import ProfileConfig
 
@@ -49,7 +51,21 @@ def dashboard_index(request: HttpRequest) -> HttpResponse:
     _reap_zombies_synchronously()
     profiles = ProfileConfig.objects.filter(is_active=True).order_by('name')
     tasks = TaskExecution.objects.filter(user=request.user).order_by('-created_at')[:20]
-    return render(request, 'dashboard/index.html', {'profiles': profiles, 'tasks': tasks})
+    models_catalog = fetch_available_models()
+    if not models_catalog:
+        models_catalog = [{"id": settings.DEFAULT_MODEL_NAME}]
+
+    # Modelo padrão: escolha salva do usuário prevalece; sem escolha salva,
+    # usa a fonte única de verdade settings.DEFAULT_MODEL_NAME
+    # (="deepseek-v4-flash"), de modo que o dropdown a preselectiona.
+    default_model = request.COOKIES.get('lexicraft_model', '') or settings.DEFAULT_MODEL_NAME
+
+    return render(request, 'dashboard/index.html', {
+        'profiles': profiles,
+        'tasks': tasks,
+        'models_catalog': models_catalog,
+        'default_model': default_model,
+    })
 
 
 @login_required
@@ -78,11 +94,17 @@ def start_task(request: HttpRequest) -> HttpResponse:
     """
     profile_id = request.POST.get('profile_id')
     text = request.POST.get('original_prompt', '').strip()
+    model = (request.POST.get('model') or '').strip()
 
     if not profile_id or not text:
         return JsonResponse({'error': 'Perfil e texto são obrigatórios.'}, status=400)
 
     profile = get_object_or_404(ProfileConfig, pk=profile_id, is_active=True)
+
+    # Modelo desacoplado do perfil: usa o escolhido no dropdown, caindo para o
+    # model_name do perfil apenas quando o form não enviar um modelo.
+    if not model:
+        model = profile.model_name or settings.DEFAULT_MODEL_NAME
 
     # Verifica task recentemente existente e equivalente (mesmo perfil + texto).
     recent_threshold = timezone.now() - timedelta(seconds=30)
@@ -109,6 +131,7 @@ def start_task(request: HttpRequest) -> HttpResponse:
         profile=profile,
         original_prompt=text,
         status='PENDING',
+        model_name=model,
         max_iterations=profile.default_max_iterations,
         max_budget_usd=profile.default_max_budget_usd,
         max_time_seconds=profile.default_max_time_seconds,

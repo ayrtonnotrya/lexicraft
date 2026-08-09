@@ -148,6 +148,12 @@ OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 OPENCODE_MODELS_URL = config('OPENCODE_MODELS_URL', default='https://opencode.ai/zen/go/v1/models')
 DEFAULT_MODEL_NAME = config('DEFAULT_MODEL_NAME', default='deepseek-v4-flash')
 
+# Temperatura de amostragem das chamadas de LLM. Alguns modelos do catálogo
+# (ex.: glm-5.2) só aceitam temperature=1 — um valor fixo baixo (0.0/0.7) faz a
+# chamada falhar com 400. Usamos 1.0 como default seguro e universal, mantendo
+# a capacidade de ajuste fino por ambiente.
+LLM_TEMPERATURE = config('LLM_TEMPERATURE', default=1.0, cast=float)
+
 # Tabela estática de custos (USD por 1M de tokens) — Motor de Isocusto.
 COST_PER_1M_PROMPT_TOKENS = config('COST_PER_1M_PROMPT_TOKENS', default=0.15, cast=float)
 COST_PER_1M_COMPLETION_TOKENS = config('COST_PER_1M_COMPLETION_TOKENS', default=0.60, cast=float)

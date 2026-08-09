@@ -6,6 +6,8 @@ Literal exato e exigir cobertura integral dos eixos.
 """
 from typing import Dict, List
 
+from django.conf import settings
+
 from apps.orchestrator.schemas import build_dynamic_auditor_schema
 from apps.orchestrator.services.prompt_builder import build_auditor_prompt
 
@@ -44,7 +46,7 @@ async def call_auditor_agent(
                 {"role": "user", "content": f"<user_input>\n{user_text}\n</user_input>"},
             ],
             response_format={"type": "json_object"},
-            temperature=0.0,  # Determinismo avaliativo
+            temperature=settings.LLM_TEMPERATURE,
         )
         content = response.choices[0].message.content
 

@@ -6,6 +6,8 @@ alimenta a Regra dos 3 Strikes.
 import json
 from typing import Dict
 
+from django.conf import settings
+
 from apps.orchestrator.schemas import GuardrailResponseSchema
 from apps.orchestrator.services.prompt_builder import build_guardrail_prompt
 
@@ -49,7 +51,7 @@ async def call_guardrail_agent(
                 },
             ],
             response_format={"type": "json_object"},
-            temperature=0.0,
+            temperature=settings.LLM_TEMPERATURE,
         )
         content = response.choices[0].message.content
 

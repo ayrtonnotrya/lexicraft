@@ -10,11 +10,22 @@
                 <label for="profile_id" class="block text-sm font-medium mb-1">Perfil de Geração</label>
                 <select name="profile_id" id="profile_id" class="w-full border rounded p-2" required>
                     {% for p in profiles %}
-                        <option value="{{ p.id }}">{{ p.name }} ({{ p.model_name }})</option>
+                        <option value="{{ p.id }}">{{ p.name }}</option>
                     {% empty %}
                         <option value="">Nenhum perfil ativo. Crie um no Admin.</option>
                     {% endfor %}
                 </select>
+            </div>
+            <div>
+                <label for="model" class="block text-sm font-medium mb-1">Modelo de IA</label>
+                <select name="model" id="model" class="w-full border rounded p-2">
+                    {% for m in models_catalog %}
+                        <option value="{{ m.id }}" {% if m.id == default_model %}selected{% endif %}>{{ m.id }}</option>
+                    {% empty %}
+                        <option value="">Nenhum modelo disponível.</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-slate-500 mt-1">Desacoplado do perfil: você pode escolher qualquer modelo do catálogo.</p>
             </div>
             <div>
                 <label for="original_prompt" class="block text-sm font-medium mb-1">Texto Original</label>
@@ -42,6 +53,18 @@
             btn.disabled = true;
             btn.textContent = 'Enfileirando...';
           }
+        });
+      });
+
+      // Persistência da escolha de modelo em cookie: quando o usuário troca de
+      // modelo, a escolha é salva e prevalece sobre o padrão deepseek-v4-flash
+      // nos próximos carregamentos (lido server-side em dashboard_index).
+      document.addEventListener('DOMContentLoaded', function () {
+        var modelSelect = document.getElementById('model');
+        if (!modelSelect) return;
+        modelSelect.addEventListener('change', function () {
+          document.cookie = 'lexicraft_model=' + encodeURIComponent(modelSelect.value) +
+            ';path=/;max-age=31536000;samesite=Lax';
         });
       });
     </script>

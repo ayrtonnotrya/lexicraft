@@ -6,6 +6,8 @@ Contrato de saída: `WriterResponseSchema`. Usa Universal JSON Mode
 import json
 from typing import Dict, Optional
 
+from django.conf import settings
+
 from apps.orchestrator.schemas import WriterResponseSchema
 from apps.orchestrator.services.prompt_builder import build_writer_prompt
 
@@ -51,7 +53,7 @@ async def call_writer_agent(
                 {"role": "user", "content": f"<user_input>\n{original_prompt}\n</user_input>"},
             ],
             response_format={"type": "json_object"},
-            temperature=0.7,
+            temperature=settings.LLM_TEMPERATURE,
         )
         content = response.choices[0].message.content
 

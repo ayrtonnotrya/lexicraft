@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}LexiCraft — Task #{{ task.id }}{% endblock %}
+{% block content %}
+<div class="bg-white rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Task #{{ task.id }} — Progresso</h2>
+        <a href="{% url 'dashboard:dashboard_index' %}" class="text-sm text-slate-600 hover:underline">← Voltar</a>
+    </div>
+
+    <div id="task-progress"
+         hx-get="{% url 'dashboard:task_status_partial' task.id %}"
+         hx-trigger="every 2s"
+         hx-swap="innerHTML">
+        {% include "partials/task_progress.html" %}
+    </div>
+</div>
+{% endblock %}

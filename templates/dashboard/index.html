@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}LexiCraft — Painel{% endblock %}
+{% block content %}
+<div class="grid md:grid-cols-2 gap-6">
+    <section class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Nova Otimização Textual</h2>
+        <form method="post" action="{% url 'dashboard:start_task' %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label for="profile_id" class="block text-sm font-medium mb-1">Perfil de Geração</label>
+                <select name="profile_id" id="profile_id" class="w-full border rounded p-2" required>
+                    {% for p in profiles %}
+                        <option value="{{ p.id }}">{{ p.name }} ({{ p.model_name }})</option>
+                    {% empty %}
+                        <option value="">Nenhum perfil ativo. Crie um no Admin.</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="original_prompt" class="block text-sm font-medium mb-1">Texto Original</label>
+                <textarea name="original_prompt" id="original_prompt" rows="6"
+                          class="w-full border rounded p-2" required
+                          placeholder="Cole aqui o texto que deseja otimizar..."></textarea>
+            </div>
+            <button type="submit"
+                    class="bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded">
+                Iniciar Otimização
+            </button>
+        </form>
+    </section>
+
+    <section class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Execuções Recentes</h2>
+        <ul class="divide-y divide-slate-200">
+            {% for t in tasks %}
+                <li class="py-2">
+                    <a href="{% url 'dashboard:task_detail' t.id %}" class="flex justify-between items-center hover:bg-slate-50 rounded p-2">
+                        <div>
+                            <span class="text-sm font-medium">Task #{{ t.id }}</span>
+                            <span class="text-xs text-slate-500"> — {{ t.profile.name }}</span>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">{{ t.status }}</span>
+                    </a>
+                </li>
+            {% empty %}
+                <li class="py-4 text-slate-500 text-sm">Nenhuma execução ainda.</li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}

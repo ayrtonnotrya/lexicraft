@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LexiCraft{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <header class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-xl font-bold">⚙️ LexiCraft</span>
+            <span class="text-xs bg-slate-700 px-2 py-1 rounded-full">Motor Agêntico de Otimização Textual</span>
+        </div>
+        <div class="flex items-center gap-4">
+            {% if user.is_authenticated %}
+                <span class="text-sm">{{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Sair</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Entrar</a>
+            {% endif %}
+        </div>
+    </header>
+    <main class="max-w-5xl mx-auto p-6">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

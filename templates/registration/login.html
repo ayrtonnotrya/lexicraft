@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}LexiCraft — Entrar{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-lg shadow p-6 mt-8">
+    <h2 class="text-lg font-semibold mb-4">Entrar no LexiCraft</h2>
+    {% if form.errors %}
+        <div class="text-sm text-red-600 mb-3">Usuário ou senha inválidos.</div>
+    {% endif %}
+    <form method="post" action="{% url 'login' %}" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label for="id_username" class="block text-sm font-medium mb-1">Usuário</label>
+            <input type="text" name="username" id="id_username" autofocus required
+                   class="w-full border rounded p-2">
+        </div>
+        <div>
+            <label for="id_password" class="block text-sm font-medium mb-1">Senha</label>
+            <input type="password" name="password" id="id_password" required
+                   class="w-full border rounded p-2">
+        </div>
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded">
+            Entrar
+        </button>
+    </form>
+</div>
+{% endblock %}

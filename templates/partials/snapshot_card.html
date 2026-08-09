@@ -1,0 +1,15 @@
+{% comment %}Card de snapshot renderizado (via HTMX ou server-side).{% endcomment %}
+<div class="border rounded p-3 bg-slate-50" id="snapshot-{{ snapshot.id }}">
+    <div class="flex items-center justify-between">
+        <span class="text-sm font-semibold">Iteração {{ snapshot.iteration_number }}</span>
+        <span class="text-sm font-semibold text-green-700">W(x) = {{ snapshot.nash_score }}</span>
+    </div>
+    <p class="text-xs text-slate-500 mt-1">{{ snapshot.created_at|date:"d/m/Y H:i" }}</p>
+    {% if snapshot.normalized_scores %}
+        <div class="mt-2 flex flex-wrap gap-2">
+            {% for axis_id, score in snapshot.normalized_scores.items %}
+                <span class="text-xs bg-white border rounded px-2 py-0.5">Eixo {{ axis_id }}: {{ score }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

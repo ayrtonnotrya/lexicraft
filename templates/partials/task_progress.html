@@ -1,0 +1,49 @@
+{% comment %}Fragmento HTMX de progresso da task (sem layout completo).{% endcomment %}
+<div class="space-y-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <span class="text-sm px-3 py-1 rounded-full
+            {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' %}bg-green-100 text-green-800
+            {% elif task.status == 'RUNNING' or task.status == 'PENDING' %}bg-blue-100 text-blue-800
+            {% else %}bg-red-100 text-red-800{% endif %}">
+            {{ task.status }}
+        </span>
+        <span class="text-sm text-slate-600">Iteração: {{ task.current_iteration }}</span>
+        <span class="text-sm text-slate-600">Custo: ${{ task.accumulated_cost_usd }}</span>
+    </div>
+
+    <div class="text-sm text-slate-700">
+        {% if task.current_step %}
+            <p>{{ task.current_step }}</p>
+        {% else %}
+            <p>Enfileirando execução...</p>
+        {% endif %}
+    </div>
+
+    {% if task.status == 'RUNNING' or task.status == 'PENDING' %}
+        <div class="w-full bg-slate-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full" style="width: 100%"></div>
+        </div>
+    {% endif %}
+
+    {% if task.final_text %}
+        <div class="mt-4">
+            <h3 class="text-sm font-semibold mb-1">Texto Final</h3>
+            <p class="text-sm bg-slate-50 border rounded p-3 whitespace-pre-wrap">{{ task.final_text }}</p>
+        </div>
+    {% endif %}
+
+    {% if task.final_score is not None %}
+        <p class="text-sm">Pontuação Global W(x): <strong>{{ task.final_score }}</strong></p>
+    {% endif %}
+
+    {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' %}
+        <div class="pt-4">
+            <h3 class="text-sm font-semibold mb-2">Snapshots (Histórico de Iterações)</h3>
+            <div id="snapshots-list" class="space-y-3">
+                {% for snap in task.snapshots.all|dictsortreversed:"nash_score" %}
+                    {% include "partials/snapshot_card.html" with snapshot=snap %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>

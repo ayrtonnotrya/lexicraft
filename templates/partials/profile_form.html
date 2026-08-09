@@ -1,0 +1,29 @@
+{% comment %}Fragmento parcial do formulário de criação/edição de Perfil (via HTMX).{% endcomment %}
+<form id="profile-form"
+      hx-post="{{ target_url }}"
+      hx-target="#profile-form-container"
+      hx-swap="innerHTML"
+      class="space-y-4">
+    {% csrf_token %}
+    <div>
+        <label for="name" class="block text-sm font-medium mb-1">Nome do Perfil</label>
+        <input type="text" id="name" name="name" value="{{ form.name.value|default:'' }}"
+               class="w-full border rounded p-2">
+    </div>
+    <div>
+        <label for="model_name" class="block text-sm font-medium mb-1">Modelo LLM</label>
+        <select id="model_name" name="model_name" class="w-full border rounded p-2">
+            {% for value, label in model_choices %}
+                <option value="{{ value }}" {% if form.model_name.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if form.errors %}
+        <div class="text-sm text-red-600 space-y-1">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}<p>{{ field }}: {{ error }}</p>{% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+    <button type="submit" class="bg-slate-900 hover:bg-slate-700 text-white px-4 py-2 rounded">Salvar Perfil</button>
+</form>

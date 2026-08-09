@@ -108,6 +108,39 @@ def test_cenario_c_abort_3_strikes_escopo(mock_writer, mock_guardrail, mock_audi
 
 
 # ---------------------------------------------------------------------------
+# Cenário C2: Aborto na iteração N preserva o melhor snapshot das anteriores
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db(transaction=True)
+@patch(PATCH_AUDITOR)
+@patch(PATCH_GUARDRAIL)
+@patch(PATCH_WRITER)
+def test_cenario_c2_abort_preserva_snapshot_iteracao_anterior(mock_writer, mock_guardrail, mock_auditor, task_execution_factory):
+    # Iteração 1 passa e grava snapshot (deduções 10/0 -> W ~0.9487, < target, não converge);
+    # Iteração 2 aborta por 3 strikes no Guard-rail. O snapshot da iteração 1 deve
+    # ser preservado em final_text/final_score e o status mantido como ABORTED.
+    task = task_execution_factory()
+    mock_writer.return_value = writer_result()
+    mock_guardrail.side_effect = [
+        _approved(),
+        guardrail_result(get_mock_guardrail_rejected()),
+        guardrail_result(get_mock_guardrail_rejected()),
+        guardrail_result(get_mock_guardrail_rejected()),
+    ]
+    mock_auditor.return_value = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 10.0, 2: 0.0}))
+
+    run_optimization_pipeline(task.id)
+
+    task.refresh_from_db()
+    assert task.status == TaskStatus.ABORTED_GUARDRAIL_STRIKES
+    # Apenas a iteração 1 chegou ao Tribunal (a 2 abortou no Guard-rail).
+    assert task.snapshots.count() == 1
+    snapshot = task.snapshots.first()
+    # O melhor snapshot é preservado como resultado final mesmo no aborto.
+    assert task.final_text == snapshot.generated_text
+    assert task.final_score == pytest.approx(snapshot.nash_score)
+
+
+# ---------------------------------------------------------------------------
 # Cenário D: Instanciação do 3º Corretor no Tribunal
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db(transaction=True)

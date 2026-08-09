@@ -501,14 +501,24 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
 
 
 def _abort_guardrail(task: TaskExecution, reason: str) -> None:
-    """Registra o abortamento por 3 strikes consecutivos e encerra a task."""
+    """Registra o abortamento por 3 strikes consecutivos e encerra a task.
+
+    Preserva o melhor Snapshot já gravado (se houver) em `final_text`/
+    `final_score`, de modo que o histórico produzido nas iterações anteriores
+    ao aborto não se perca na UI (ex.: aborto na iteração 2 deve manter o
+    resultado da iteração 1 visível).
+    """
     # Fence: não sobrescreve estado terminal previamente consolidado
     # (ex.: Ceifador já pode ter marcado FAILED_TIMEOUT em race).
     if _is_terminal(task):
         return
+    best_snapshot = task.snapshots.order_by('-nash_score').first()
+    if best_snapshot:
+        task.final_text = best_snapshot.generated_text
+        task.final_score = best_snapshot.nash_score
     _set_step(task, f"Abortado: 3 strikes consecutivos no Guard-rail ({reason}).")
     task.status = TaskStatus.ABORTED_GUARDRAIL_STRIKES
-    task.save(update_fields=['status', 'updated_at'])
+    task.save(update_fields=['final_text', 'final_score', 'status', 'updated_at'])
 
 
 @celery_app.task(name='orchestrator.reap_zombie_tasks')

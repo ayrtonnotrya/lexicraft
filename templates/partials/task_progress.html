@@ -127,18 +127,22 @@ automaticamente, sem JSextra e sem duplo-id.
         </div>
     {% endif %}
 
-    {% if task.final_text %}
+    {% if task.final_text or best_snapshot %}
         <div class="mt-4">
             <h3 class="text-sm font-semibold mb-1">Texto Final</h3>
-            <p class="text-sm bg-slate-50 border rounded p-3 whitespace-pre-wrap">{{ task.final_text }}</p>
+            <p class="text-sm bg-slate-50 border rounded p-3 whitespace-pre-wrap">
+                {% if task.final_text %}{{ task.final_text }}{% elif best_snapshot %}{{ best_snapshot.generated_text }}{% endif %}
+            </p>
         </div>
     {% endif %}
 
     {% if task.final_score is not None %}
         <p class="text-sm">Pontuação Global W(x): <strong>{{ task.final_score }}</strong></p>
+    {% elif best_snapshot %}
+        <p class="text-sm">Pontuação Global W(x): <strong>{{ best_snapshot.nash_score }}</strong></p>
     {% endif %}
 
-    {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' or task.status == 'CANCELLED' %}
+    {% if task.status != 'PENDING' and task.status != 'RUNNING' %}
         <div class="pt-4">
             <h3 class="text-sm font-semibold mb-2">Snapshots (Histórico de Iterações)</h3>
             <div id="snapshots-list" class="space-y-3">

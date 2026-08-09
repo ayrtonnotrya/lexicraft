@@ -149,8 +149,9 @@ def task_detail(request: HttpRequest, task_id: int) -> HttpResponse:
     if task.status == 'RUNNING' and task.last_heartbeat_at:
         is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
     axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
+    best_snapshot = task.snapshots.order_by('-nash_score').first()
     return render(request, 'dashboard/task_detail.html', {
-        'task': task, 'is_stale': is_stale, 'axes_by_id': axes_by_id,
+        'task': task, 'is_stale': is_stale, 'axes_by_id': axes_by_id, 'best_snapshot': best_snapshot,
     })
 
 
@@ -169,8 +170,9 @@ def task_status_partial(request: HttpRequest, task_id: int) -> HttpResponse:
         is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
 
     axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
+    best_snapshot = task.snapshots.order_by('-nash_score').first()
     return render(request, 'partials/task_progress.html', {
-        'task': task, 'is_stale': is_stale, 'axes_by_id': axes_by_id,
+        'task': task, 'is_stale': is_stale, 'axes_by_id': axes_by_id, 'best_snapshot': best_snapshot,
     })
 
 
@@ -209,7 +211,8 @@ def cancel_task(request: HttpRequest, task_id: int) -> HttpResponse:
         if task.status == 'RUNNING' and task.last_heartbeat_at:
             is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
         axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
+        best_snapshot = task.snapshots.order_by('-nash_score').first()
         return render(request, 'partials/task_progress.html', {
-            'task': task, 'is_stale': False, 'axes_by_id': axes_by_id,
+            'task': task, 'is_stale': False, 'axes_by_id': axes_by_id, 'best_snapshot': best_snapshot,
         })
     return redirect('dashboard:task_detail', task_id=task_id)

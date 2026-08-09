@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# LexiCraft — Override EXCLUSIVO de desenvolvimento
+#
+# O docker compose carrega este arquivo automaticamente quando ele existe na
+# mesma pasta do docker-compose.yml. Por isso ele só afeta quem roda
+# `docker compose up` localmente.
+#
+# Produção NÃO é afetada: no Portainer/deploy só o docker-compose.yml base é
+# usado, então este override nunca é aplicado.
+#
+# O que ele faz:
+#   1. Monta o código-fonte por bind mount (./:/app) -> alterações locais
+#      aparecem no container sem precisar rebuildar (docker compose build).
+#   2. Troca o gunicorn pelo runserver do Django, que tem auto-reload: a cada
+#      mudança salva no disco o servidor reinicia sozinho.
+#   3. Expõe a porta 8000 direto para localhost.
+#   4. Aplica --autoreload no worker/beat do Celery.
+# ---------------------------------------------------------------------------
+
+services:
+  web:
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py seed_profiles &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+
+  worker:
+    command: sh -c "python manage.py migrate --noinput && celery -A config worker --loglevel=${CELERY_LOGLEVEL:-info} --autoreload"
+    volumes:
+      - ./:/app
+
+  beat:
+    volumes:
+      - ./:/app

@@ -1,3 +1,4 @@
+{% load dashboard_extras %}
 {% comment %}Fragmento HTMX de progresso da task (sem layout completo).
 
 Padrão "poll-and-stop" canônico do HTMX: o próprio elemento raiz carrega os
@@ -130,9 +131,7 @@ automaticamente, sem JSextra e sem duplo-id.
     {% if task.final_text or best_snapshot %}
         <div class="mt-4">
             <h3 class="text-sm font-semibold mb-1">Texto Final</h3>
-            <p class="text-sm bg-slate-50 border rounded p-3 whitespace-pre-wrap">
-                {% if task.final_text %}{{ task.final_text }}{% elif best_snapshot %}{{ best_snapshot.generated_text }}{% endif %}
-            </p>
+            <p class="text-sm bg-slate-50 border rounded p-3 whitespace-pre-wrap">{% if task.final_text %}{{ task.final_text|strip }}{% elif best_snapshot %}{{ best_snapshot.generated_text|strip }}{% endif %}</p>
         </div>
     {% endif %}
 

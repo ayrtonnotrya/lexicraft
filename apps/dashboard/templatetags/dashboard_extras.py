@@ -25,3 +25,11 @@ def get_item(mapping, key):
     except (TypeError, ValueError):
         pass
     return ''
+
+
+@register.filter
+def strip(value):
+    """Remove espaços e quebras de linha nas pontas do texto (safe p/ display)."""
+    if value is None:
+        return ''
+    return str(value).strip()

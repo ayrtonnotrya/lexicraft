@@ -353,7 +353,7 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
                     writer_feedback,
                 ))
                 _accumulate(task_execution, pt, ct)
-                generated_text = writer_payload.generated_text
+                generated_text = writer_payload.generated_text.strip()
 
                 # 2. Guard-rail (reprovação semântica, rede ou schema = Strike)
                 _set_step(task_execution, f"Executando Guard-rail (Tentativa {attempt}/3)")

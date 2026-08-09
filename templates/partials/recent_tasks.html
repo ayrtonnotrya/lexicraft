@@ -1,0 +1,25 @@
+{% comment %}Fragmento HTMX da lista de Execuções Recentes na home.
+Atualizado por polling a cada 5s e imediatamente após o redirect de criação
+de task.{% endcomment %}
+<ul class="divide-y divide-slate-200">
+    {% for t in tasks %}
+        <li class="py-2">
+            <a href="{% url 'dashboard:task_detail' t.id %}" class="flex justify-between items-center hover:bg-slate-50 rounded p-2">
+                <div>
+                    <span class="text-sm font-medium">Task #{{ t.id }}</span>
+                    <span class="text-xs text-slate-500"> — {{ t.profile.name }}</span>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if t.status == 'COMPLETED' %}bg-green-100 text-green-800
+                    {% elif t.status == 'COMPLETED_WITH_ROLLBACK' %}bg-amber-100 text-amber-800
+                    {% elif t.status == 'CANCELLED' %}bg-slate-200 text-slate-700
+                    {% elif t.status == 'RUNNING' or t.status == 'PENDING' %}bg-blue-100 text-blue-800
+                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ t.status }}
+                </span>
+            </a>
+        </li>
+    {% empty %}
+        <li class="py-4 text-slate-500 text-sm">Nenhuma execução ainda.</li>
+    {% endfor %}
+</ul>

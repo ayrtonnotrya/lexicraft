@@ -46,6 +46,50 @@ def _now() -> object:
     return timezone.now()
 
 
+# Conjunto de status que representam um encerramento definitivo da task.
+# Qualquer função que grave um status terminal DEVE checar este conjunto antes
+# de persistir, evitando sobrescrever uma decisão já consolidada por race
+# condition (ex.: Ceifador marcando FAILED_TIMEOUT enquanto o Worker finalize).
+TERMINAL_STATUSES = frozenset({
+    TaskStatus.COMPLETED,
+    TaskStatus.COMPLETED_WITH_ROLLBACK,
+    TaskStatus.ABORTED_GUARDRAIL_STRIKES,
+    TaskStatus.FAILED_BUDGET_EXCEEDED,
+    TaskStatus.FAILED_TIMEOUT,
+    TaskStatus.FAILED_NO_SNAPSHOTS,
+    TaskStatus.CANCELLED,
+})
+
+
+def _is_terminal(task: TaskExecution) -> bool:
+    """True se a task já atingiu um encerramento definitivo."""
+    return task.status in TERMINAL_STATUSES
+
+
+def _refresh_and_check_cancelled(task: TaskExecution) -> bool:
+    """Relê a task do banco e verifica se o usuário pediu cancelamento.
+
+    Cancelamento cooperativo: a view de cancelamento marca `status=CANCELLED`
+    no banco; o Worker, entre passos do loop, relê e aborta gracefully,
+    preservando o melhor snapshot gravado até ali.
+
+    Retorna True se a task foi cancelada (caller deve `return` imediatamente).
+    """
+    task.refresh_from_db(fields=['status'])
+    return task.status == TaskStatus.CANCELLED
+
+
+def _handle_cancellation(task: TaskExecution) -> None:
+    """Consolida o cancelamento: preserva melhor snapshot e finaliza step."""
+    best_snapshot = task.snapshots.order_by('-nash_score').first()
+    if best_snapshot:
+        task.final_text = best_snapshot.generated_text
+        task.final_score = best_snapshot.nash_score
+    task.current_step = "Cancelado pelo usuário."
+    # O status CANCELLED já foi setado pela view; apenas persistimos finais.
+    task.save(update_fields=['final_text', 'final_score', 'current_step', 'updated_at'])
+
+
 def _set_step(task: TaskExecution, step: str, save: bool = True) -> None:
     """Atualiza o progresso descritivo e o heartbeat do Worker."""
     task.current_step = step
@@ -72,7 +116,16 @@ def _accumulate(task: TaskExecution, prompt_tokens: int, completion_tokens: int)
 
 
 def _rollback(task: TaskExecution, status: str = TaskStatus.COMPLETED_WITH_ROLLBACK) -> None:
-    """Recupera o melhor Snapshot histórico e ejeta a task com Rollback."""
+    """Recupera o melhor Snapshot histórico e ejeta a task com Rollback.
+
+    Guarda de transição: NUNCA sobrescreve um status terminal já consolidado
+    (COMPLETED, *_ROLLBACK, ABORTED_*, FAILED_*). Evita que o Ceifador, uma
+    retentativa tardia ou um poll HTTP regrave um estado finalizado,
+    sobrescrevendo a decisão definitiva do Worker (race condition).
+    """
+    if _is_terminal(task):
+        return
+
     best_snapshot = task.snapshots.order_by('-nash_score').first()
     if best_snapshot:
         task.final_text = best_snapshot.generated_text
@@ -84,6 +137,9 @@ def _rollback(task: TaskExecution, status: str = TaskStatus.COMPLETED_WITH_ROLLB
 
 
 def _finalize_completed(task: TaskExecution, snapshot: ExecutionSnapshot) -> None:
+    # Fence: não sobrescreve estado terminal previamente consolidado.
+    if _is_terminal(task):
+        return
     task.final_text = snapshot.generated_text
     task.final_score = snapshot.nash_score
     task.status = TaskStatus.COMPLETED
@@ -237,6 +293,11 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
     max_iterations = task_execution.max_iterations or settings.MAX_ITERATIONS_PER_TASK
 
     for iteration in range(1, max_iterations + 1):
+        # Cancelamento cooperativo: checa antes de iniciar nova iteração.
+        if _refresh_and_check_cancelled(task_execution):
+            _handle_cancellation(task_execution)
+            return
+
         task_execution.current_iteration = iteration
         task_execution.save(update_fields=['current_iteration', 'updated_at'])
 
@@ -252,6 +313,11 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
         auditor_payloads = None
 
         for attempt in range(1, MAX_GUARDRAIL_ATTEMPTS + 1):
+            # Cancelamento cooperativo: checa antes de cada tentativa.
+            if _refresh_and_check_cancelled(task_execution):
+                _handle_cancellation(task_execution)
+                return
+
             _set_step(task_execution, f"Executando Redator (Iteração {iteration}, Tentativa {attempt}/3)")
 
             # 1. Redator
@@ -297,6 +363,10 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
             # 3. Tribunal de Corretores Paralelos (+ Desempate condicional).
             #    Erros de schema (axis_id alucinado / critério omitido) e falhas
             #    de rede nos Corretores também consomem 1 Strike.
+            # Cancelamento cooperativo: checa antes de iniciar o Tribunal (custoso).
+            if _refresh_and_check_cancelled(task_execution):
+                _handle_cancellation(task_execution)
+                return
             _set_step(task_execution, f"Executando Tribunal de Corretores (Iteração {iteration})")
             try:
                 mean_deductions, active_types, auditor_payloads, pt, ct = _run_tribunal(
@@ -410,6 +480,10 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
 
 def _abort_guardrail(task: TaskExecution, reason: str) -> None:
     """Registra o abortamento por 3 strikes consecutivos e encerra a task."""
+    # Fence: não sobrescreve estado terminal previamente consolidado
+    # (ex.: Ceifador já pode ter marcado FAILED_TIMEOUT em race).
+    if _is_terminal(task):
+        return
     _set_step(task, f"Abortado: 3 strikes consecutivos no Guard-rail ({reason}).")
     task.status = TaskStatus.ABORTED_GUARDRAIL_STRIKES
     task.save(update_fields=['status', 'updated_at'])
@@ -420,8 +494,13 @@ def reap_zombie_tasks() -> int:
     """Ceifador: marca como FAILED_TIMEOUT tasks RUNNING sem heartbeat recente.
 
     Fonte da verdade: docs/AGENTS.md (Sessão 5.E).
+
+    Janela de tolerância: 120s. O Worker síncrono pode ficar múltiplos
+    segundos sem atualizar `last_heartbeat_at` durante uma chamada LLM de
+    longa duração (Redator/Corretores) — 60s era agressivo demais e gerava
+    race condition travando tasks vias.
     """
-    threshold = _now() - timedelta(minutes=1)
+    threshold = _now() - timedelta(seconds=120)
     zombies = TaskExecution.objects.filter(status=TaskStatus.RUNNING, last_heartbeat_at__lt=threshold)
     count = 0
     for task in zombies:

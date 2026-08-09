@@ -22,30 +22,42 @@
                           class="w-full border rounded p-2" required
                           placeholder="Cole aqui o texto que deseja otimizar..."></textarea>
             </div>
-            <button type="submit"
-                    class="bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded">
+            <button type="submit" id="btn-start-task"
+                    class="bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded disabled:opacity-50 disabled:cursor-wait">
                 Iniciar Otimização
             </button>
         </form>
     </section>
 
+    <script>
+      // Guarda contra duplo submit: desabilita o botão imediatamente após o
+      // primeiro envio e bloqueia o form até o redirect retornar. Camada
+      // client-side complementar à dedup server-side em start_task.
+      document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('btn-start-task')?.closest('form');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+          var btn = document.getElementById('btn-start-task');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Enfileirando...';
+          }
+        });
+      });
+    </script>
+
     <section class="bg-white rounded-lg shadow p-6">
         <h2 class="text-lg font-semibold mb-4">Execuções Recentes</h2>
-        <ul class="divide-y divide-slate-200">
-            {% for t in tasks %}
-                <li class="py-2">
-                    <a href="{% url 'dashboard:task_detail' t.id %}" class="flex justify-between items-center hover:bg-slate-50 rounded p-2">
-                        <div>
-                            <span class="text-sm font-medium">Task #{{ t.id }}</span>
-                            <span class="text-xs text-slate-500"> — {{ t.profile.name }}</span>
-                        </div>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100">{{ t.status }}</span>
-                    </a>
-                </li>
-            {% empty %}
-                <li class="py-4 text-slate-500 text-sm">Nenhuma execução ainda.</li>
-            {% endfor %}
-        </ul>
+        {% comment %}Wrapper de polling HTMX: atualiza a lista a cada 5s, mantendo
+        o usuário informado sobre tasks recém-criadas sem recarregar a página.
+        Após enviar o form (POST -> redirect para task_detail), ao voltar para a
+        home a nova task já aparece automaticamente.{% endcomment %}
+        <div id="recent-tasks"
+             hx-get="{% url 'dashboard:recent_tasks_partial' %}"
+             hx-trigger="every 5s"
+             hx-swap="innerHTML">
+            {% include "partials/recent_tasks.html" %}
+        </div>
     </section>
 </div>
 {% endblock %}

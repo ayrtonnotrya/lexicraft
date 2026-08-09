@@ -1,4 +1,5 @@
 {% comment %}Card de snapshot renderizado (via HTMX ou server-side).{% endcomment %}
+{% load dashboard_extras %}
 <div class="border rounded p-3 bg-slate-50" id="snapshot-{{ snapshot.id }}">
     <div class="flex items-center justify-between">
         <span class="text-sm font-semibold">Iteração {{ snapshot.iteration_number }}</span>
@@ -8,7 +9,13 @@
     {% if snapshot.normalized_scores %}
         <div class="mt-2 flex flex-wrap gap-2">
             {% for axis_id, score in snapshot.normalized_scores.items %}
-                <span class="text-xs bg-white border rounded px-2 py-0.5">Eixo {{ axis_id }}: {{ score }}</span>
+                <span class="text-xs bg-white border rounded px-2 py-0.5">
+                    {% if axes_by_id and axes_by_id|get_item:axis_id %}
+                        {{ axes_by_id|get_item:axis_id }}: {{ score }}
+                    {% else %}
+                        Eixo {{ axis_id }}: {{ score }}
+                    {% endif %}
+                </span>
             {% endfor %}
         </div>
     {% endif %}

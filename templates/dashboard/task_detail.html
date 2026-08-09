@@ -7,11 +7,10 @@
         <a href="{% url 'dashboard:dashboard_index' %}" class="text-sm text-slate-600 hover:underline">← Voltar</a>
     </div>
 
-    <div id="task-progress"
-         hx-get="{% url 'dashboard:task_status_partial' task.id %}"
-         hx-trigger="every 2s"
-         hx-swap="innerHTML">
-        {% include "partials/task_progress.html" %}
-    </div>
+    {% comment %}O próprio partial raiz (id="task-progress") carrega os
+    atributos hx-* quando em curso, e se auto-substitui a cada poll. Em
+    estado terminal, a raiz vem sem hx-* e o polling para sozinho. Nenhum
+    wrapper extra -> id único, sem duplicação. {% endcomment %}
+    {% include "partials/task_progress.html" %}
 </div>
 {% endblock %}

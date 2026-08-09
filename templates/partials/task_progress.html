@@ -1,27 +1,122 @@
-{% comment %}Fragmento HTMX de progresso da task (sem layout completo).{% endcomment %}
-<div class="space-y-4">
+{% comment %}Fragmento HTMX de progresso da task (sem layout completo).
+
+Padrão "poll-and-stop" canônico do HTMX: o próprio elemento raiz carrega os
+atributos hx-* enquanto a task está PENDING/RUNNING. A cada poll, o servidor
+devolve este mesmo partial (com hx-* se ainda em curso, sem hx-* se terminal),
+e o `hx-swap="outerHTML"` + `hx-target="this"` substituem o elemento por ele
+mesmo. Em estado terminal, a nova raiz não traz hx-* -> o polling PARA
+automaticamente, sem JSextra e sem duplo-id.
+{% endcomment %}
+<div id="task-progress" class="space-y-4"
+     {% if task.status == 'RUNNING' or task.status == 'PENDING' %}
+     hx-get="{% url 'dashboard:task_status_partial' task.id %}"
+     hx-trigger="every 2s"
+     hx-target="this"
+     hx-swap="outerHTML"
+     {% endif %}>
     <div class="flex flex-wrap items-center gap-3">
         <span class="text-sm px-3 py-1 rounded-full
-            {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' %}bg-green-100 text-green-800
+            {% if task.status == 'COMPLETED' %}bg-green-100 text-green-800
+            {% elif task.status == 'COMPLETED_WITH_ROLLBACK' %}bg-amber-100 text-amber-800
             {% elif task.status == 'RUNNING' or task.status == 'PENDING' %}bg-blue-100 text-blue-800
+            {% elif task.status == 'CANCELLED' %}bg-slate-300 text-slate-700
             {% else %}bg-red-100 text-red-800{% endif %}">
             {{ task.status }}
         </span>
         <span class="text-sm text-slate-600">Iteração: {{ task.current_iteration }}</span>
         <span class="text-sm text-slate-600">Custo: ${{ task.accumulated_cost_usd }}</span>
+        {% if task.status == 'RUNNING' or task.status == 'PENDING' %}
+        <form method="post" action="{% url 'dashboard:cancel_task' task.id %}" class="ml-auto"
+              hx-post="{% url 'dashboard:cancel_task' task.id %}"
+              hx-target="closest #task-progress"
+              hx-swap="outerHTML"
+              onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Cancelando...';">
+            {% csrf_token %}
+            <button type="submit"
+                    class="text-sm bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded disabled:opacity-50 disabled:cursor-wait">
+                Cancelar Execução
+            </button>
+        </form>
+        {% endif %}
     </div>
+
+    {% comment %}=== Banner de Erro (ABORTED_* / FAILED_*) ==={% endcomment %}
+    {% if task.status == 'ABORTED_GUARDRAIL_STRIKES' or task.status == 'FAILED_BUDGET_EXCEEDED' or task.status == 'FAILED_TIMEOUT' or task.status == 'FAILED_NO_SNAPSHOTS' %}
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+        <div class="flex items-start gap-3">
+            <div class="text-red-500 text-xl leading-none">⚠</div>
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-red-800">
+                    {% if task.status == 'ABORTED_GUARDRAIL_STRIKES' %}Execução abortada — Guard-rail reprovou 3 vezes seguidas.
+                    {% elif task.status == 'FAILED_BUDGET_EXCEEDED' %}Execução interrompida — orçamento (USD) excedido.
+                    {% elif task.status == 'FAILED_TIMEOUT' %}Worker morreu ou tempo limite excedido — optou-se pelo melhor snapshot.
+                    {% elif task.status == 'FAILED_NO_SNAPSHOTS' %}Execução falhou antes de produzir qualquer versão (sem snapshot).
+                    {% endif %}
+                </p>
+                {% if task.current_step %}
+                <p class="text-sm text-red-700 mt-1">Último estágio: {{ task.current_step }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% comment %}=== Banner de Cancelamento ==={% endcomment %}
+    {% if task.status == 'CANCELLED' %}
+    <div class="bg-slate-100 border-l-4 border-slate-500 p-4 rounded">
+        <div class="flex items-start gap-3">
+            <div class="text-slate-500 text-xl leading-none">⊘</div>
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-slate-700">
+                    Execução cancelada pelo usuário.
+                </p>
+                {% if task.final_text %}
+                <p class="text-sm text-slate-600 mt-1">
+                    A melhor versão já gravada foi preservada como texto final.
+                    Pontuação W(x) do snapshot preservado: <strong>{{ task.final_score }}</strong>
+                </p>
+                {% else %}
+                <p class="text-sm text-slate-600 mt-1">
+                    Nenhuma versão havia sido concluída antes do cancelamento.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% comment %}=== Aviso de Worker provavelmente morto (heartbeat obsoleto) ==={% endcomment %}
+    {% if is_stale %}
+    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+        <div class="flex items-start gap-3">
+            <div class="text-amber-500 text-xl leading-none">⏱</div>
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-amber-800">
+                    O Worker parece ter travado — sem heartbeat há mais de 120s.
+                </p>
+                <p class="text-sm text-amber-700 mt-1">
+                    Tentando recuperar... se a situação persistir, a task será
+                    marcada como <strong>FAILED_TIMEOUT</strong> e a melhor versão
+                    já salva será preservada.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="text-sm text-slate-700">
         {% if task.current_step %}
             <p>{{ task.current_step }}</p>
-        {% else %}
+        {% elif task.status == 'PENDING' %}
             <p>Enfileirando execução...</p>
+        {% else %}
+            <p class="text-slate-400">Nenhum estágio registrado.</p>
         {% endif %}
     </div>
 
     {% if task.status == 'RUNNING' or task.status == 'PENDING' %}
         <div class="w-full bg-slate-200 rounded-full h-2">
-            <div class="bg-blue-600 h-2 rounded-full" style="width: 100%"></div>
+            <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 100%"></div>
         </div>
     {% endif %}
 
@@ -36,12 +131,12 @@
         <p class="text-sm">Pontuação Global W(x): <strong>{{ task.final_score }}</strong></p>
     {% endif %}
 
-    {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' %}
+    {% if task.status == 'COMPLETED' or task.status == 'COMPLETED_WITH_ROLLBACK' or task.status == 'CANCELLED' %}
         <div class="pt-4">
             <h3 class="text-sm font-semibold mb-2">Snapshots (Histórico de Iterações)</h3>
             <div id="snapshots-list" class="space-y-3">
                 {% for snap in task.snapshots.all|dictsortreversed:"nash_score" %}
-                    {% include "partials/snapshot_card.html" with snapshot=snap %}
+                    {% include "partials/snapshot_card.html" with snapshot=snap axes_by_id=axes_by_id %}
                 {% endfor %}
             </div>
         </div>

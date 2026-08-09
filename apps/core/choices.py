@@ -15,6 +15,7 @@ class TaskStatus(models.TextChoices):
     FAILED_BUDGET_EXCEEDED = 'FAILED_BUDGET_EXCEEDED', _('Falha - Orçamento Excedido')
     FAILED_TIMEOUT = 'FAILED_TIMEOUT', _('Falha - Tempo Limite Excedido')
     FAILED_NO_SNAPSHOTS = 'FAILED_NO_SNAPSHOTS', _('Falha - Estagnado sem Snapshots')
+    CANCELLED = 'CANCELLED', _('Cancelado pelo Usuário')
 
 
 class PromptRole(models.TextChoices):

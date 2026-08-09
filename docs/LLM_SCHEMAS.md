@@ -12,7 +12,7 @@ Para que o orquestrador autônomo opere em loop fechado sem intervenção humana
 
 Para mitigar 100% desses riscos, o LexiCraft implementa a filosofia de **Structured Outputs**:
 1. **Pydantic como Fonte da Verdade:** Todos os retornos esperados da IA são modelados como classes `pydantic.BaseModel`. O Pydantic realiza validação de tipos, *bounds* numéricos (ex: `ge=0.0`) e coerência de chaves.
-2. **Compatibilidade Universal (OpenCode Go / OpenAI-Compatible):** Utiliza-se o endpoint padrão com `response_format={"type": "json_object"}` e o schema injetado via prompt, garantindo que qualquer modelo open-source ou proprietário suporte a requisição sem erros de API (`400 Bad Request` por flags restritas como `strict: true`).
+2. **Compatibilidade Universal (OpenCode Go / OpenAI-Compatible):** Utiliza-se o endpoint padrão com `response_format={"type": "json_object"}` e o schema injetado via prompt, garantindo que qualquer modelo open-source ou proprietário suporte a requisição sem erros de API (`400 Bad Request` por flags restritas como `strict: true`). **NUNCA** use o método `.parse()` da OpenAI, *Function Calling* atrelado a schema ou a flag `strict: true`; a string de resposta deve ser validada manualmente com `Schema.model_validate_json(response.content)`.
 3. **Isolamento de Domínio:** A IA não toma decisões de roteamento da aplicação; ela apenas preenche o contrato (JSON). O código Python lê o contrato e executa a lógica de negócio.
 
 ---
@@ -156,7 +156,7 @@ def build_dynamic_auditor_schema(valid_axis_ids: List[int]) -> Type[BaseModel]:
 
 ### 5. Exemplo de Integração (Cliente Assíncrono via SDK / API Compatível)
 
-Integração universal robusta, garantindo o funcionamento em provedores como OpenAI e OpenCode Go sem falhas de payload strict.
+Integração universal robusta, garantindo o funcionamento em provedores como OpenAI e OpenCode Go sem falhas de payload strict. Não se usa `.parse()` nem `strict: true`; o retorno é validado manualmente via `model_validate_json`.
 
 ```python
 import asyncio
@@ -171,6 +171,7 @@ from apps.orchestrator.schemas import (
 )
 
 # Inicialização limpa: Utiliza as variáveis de ambiente baseadas no provedor OpenCode Go ou OpenAI.
+# O settings.OPENAI_BASE_URL aponta para o gateway OpenCode Go (https://opencode.ai/zen/go/v1).
 client = AsyncOpenAI(
     api_key=settings.OPENAI_API_KEY,
     base_url=settings.OPENAI_BASE_URL,
@@ -200,6 +201,7 @@ async def call_auditor_agent(
     )
 
     # 2. Chamada à API utilizando Universal JSON Mode
+    #    (NUNCA use strict: true, .parse() ou Function Calling — gera 400 no OpenCode Go)
     response = await client.chat.completions.create(
         model=model,
         messages=[
@@ -213,7 +215,9 @@ async def call_auditor_agent(
     message_content = response.choices[0].message.content
     usage = response.usage
     
-    # 3. Validação nativa do Pydantic (Gera ValidationError imediato se houver alucinação de formato, ID inexistente ou critério omitido)
+    # 3. Validação nativa do Pydantic feita MANUALMENTE na string de resposta
+    #    (model_validate_json em vez de .parse()). Gera ValidationError imediato
+    #    se houver alucinação de formato, ID inexistente ou critério omitido.
     parsed_payload = AuditorResponseSchema.model_validate_json(message_content)
     
     return {

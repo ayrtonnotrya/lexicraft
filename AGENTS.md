@@ -234,6 +234,8 @@ task_execution.save()
 
 Para evitar retornos corrompidos ou mal formatados dos LLMs, todas as chamadas de auditoria dos corretores DEVEM utilizar validação via Pydantic . O schema do Corretor não é uma classe estática: ele é gerado em *runtime* pela fábrica `build_dynamic_auditor_schema(valid_axis_ids)`, que trava o `axis_id` em um `Literal` exato dos IDs do Perfil em execução e impõe um `@field_validator('deductions')` garantindo coincidência integral com o `valid_axis_ids` (nenhum ID alucinado, nenhum critério omitido).
 
+> **Compatibilidade OpenCode Go (Universal JSON Mode):** Por operarmos com o provedor **OpenCode Go**, **NÃO** utilize o método `.parse()` da OpenAI, o *Function Calling* atrelado a schema, nem a flag `strict: true` (esses recursos geram `400 Bad Request` em modelos open-source). Em vez disso, TODAS as chamadas devem usar o **Universal JSON Mode** (`response_format={"type": "json_object"}`), injetando o JSON Schema no prompt do sistema e validando manualmente a string de resposta com o Pydantic: `Schema.model_validate_json(response.content)`. Essa integração é 100% compatível com qualquer endpoint OpenAI-Compatible.
+
 ```python
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from typing import List, Type, Literal
@@ -298,8 +300,10 @@ Toda alteração ou nova funcionalidade DEVE vir acompanhada de testes unitário
 * **FAÇA** chamadas de API paralelas de LLMs no tribunal usando `httpx.AsyncClient` com `asyncio.run(asyncio.gather(...))` dentro das tasks do Celery.
 * **FAÇA** o armazenamento estrito de cada iteração na tabela `ExecutionSnapshot` para auditoria e histórico de evolução.
 * **FAÇA** a separação limpa das responsabilidades: Views gerenciam HTTP/HTMX, Celery gerencia orquestração, Pydantic gerencia validação e `math_engine.py` gerencia a matemática.
+* **FAÇA** o uso do **Universal JSON Mode** (`response_format={"type": "json_object"}`) com o JSON Schema injetado no prompt do sistema e validação manual via `Schema.model_validate_json(response.content)`, garantindo compatibilidade total com o provedor **OpenCode Go** e qualquer endpoint OpenAI-Compatible.
 
 ### DON'Ts (O que NÃO FAZER):
+* **NÃO utilize** o método `.parse()` da OpenAI, *Function Calling* atrelado a schema ou a flag `strict: true`. Esses recursos são incompatíveis com os modelos Open-Source do **OpenCode Go** e geram `400 Bad Request`. Sempre valide manualmente a string JSON com Pydantic.
 * **NÃO execute chamadas de LLM de longa duração dentro da thread de requisição HTTP síncrona do Django.** Use sempre tarefas assíncronas do Celery.
 * **NÃO coloque regras de negócio matemáticas ou ponderação de pesos dentro dos prompts do LLM.** O LLM apenas aponta as infrações e deduções brutas; o código Python calcula a nota final.
 * **NÃO crie um frontend React, Vue ou Single Page Application (SPA) separado.** Mantenha a simplicidade arquitetural com Django Templates + HTMX + Tailwind CSS.

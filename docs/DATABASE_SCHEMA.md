@@ -44,6 +44,16 @@ class AuditorType(models.TextChoices):
     DESEMPATE = 'DESEMPATE', _('Corretor de Desempate (3º)')
 ```
 
+> **Modelos de LLM NÃO são hardcoded:** Diferente dos enums acima, o catálogo de
+> modelos do provedor **OpenCode Go** não é um `TextChoices` estático — novos
+> modelos entram e saem com frequência (inclusive depreciações). A lista é
+> consultada em *runtime* a partir do endpoint público `https://opencode.ai/zen/go/v1/models`,
+> que retorna todos os modelos disponíveis e seus metadados (IDs, custo por 1M de
+> tokens de input/output, e datas de depreciação). O `ProfileConfig` grava o
+> `model_name` como um `CharField` cujas *choices* são populadas dinamicamente por
+> esse endpoint, garantindo que novos modelos sejam selecionáveis sem alteração de
+> código. O modelo padrão (fallback) é o `deepseek-v4-flash`.
+
 ---
 
 ## 3. Código-Fonte dos Modelos (`models.py`)
@@ -74,6 +84,15 @@ class ProfileConfig(TimeStampedModel):
     name = models.CharField(max_length=255, unique=True, verbose_name="Nome do Perfil")
     is_active = models.BooleanField(default=True, db_index=True)
     description = models.TextField(blank=True, null=True)
+    
+    # Modelo de LLM (OpenCode Go) utilizado por este Perfil.
+    # As choices são populadas dinamicamente via https://opencode.ai/zen/go/v1/models
+    # (ver service apps/orchestrator/services/model_catalog.py). Nada é hardcoded.
+    model_name = models.CharField(
+        max_length=100,
+        default="deepseek-v4-flash",
+        help_text="ID do modelo no catálogo OpenCode Go (fallback: deepseek-v4-flash)."
+    )
     
     # Tetos padrão recomendados (Customizáveis por instância)
     default_max_iterations = models.PositiveSmallIntegerField(default=3)
@@ -304,19 +323,23 @@ class SystemPromptInline(admin.StackedInline):
 
 @admin.register(ProfileConfig)
 class ProfileConfigAdmin(admin.ModelAdmin):
-    list_display = ('name', 'is_active', 'default_max_iterations', 'default_max_budget_usd', 'default_max_time_seconds')
-    list_filter = ('is_active',)
+    list_display = ('name', 'model_name', 'is_active', 'default_max_iterations', 'default_max_budget_usd', 'default_max_time_seconds')
+    list_filter = ('is_active', 'model_name')
     search_fields = ('name', 'description')
     inlines = [QualityAxisInline, SystemPromptInline]
     
     fieldsets = (
         (None, {
-            'fields': ('name', 'is_active', 'description')
+            'fields': ('name', 'model_name', 'is_active', 'description')
         }),
         ('Limites Globais (Default)', {
             'fields': ('default_max_iterations', 'default_max_budget_usd', 'default_max_time_seconds')
         })
     )
 ```
+
+> O campo `model_name` é renderizado como *dropdown* cujas opções são carregadas
+> dinamicamente do endpoint `https://opencode.ai/zen/go/v1/models` (via o service
+> `apps/orchestrator/services/model_catalog.py`), e não de uma lista fixa de código.
 
 Essa abordagem assegura que, em uma única tela de gestão, o administrador do sistema possa balancear os pesos geométricos ($w_i$), editar as bases de pontos, refinar as rubricas e injetar os comportamentos sistêmicos (System Prompts) do Guard-rail, Redator e Corretores para cada *Profile*.

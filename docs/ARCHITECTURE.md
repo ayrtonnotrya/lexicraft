@@ -95,6 +95,7 @@ erDiagram
         int id PK
         string name
         boolean is_active
+        string model_name "ID OpenCode Go (default deepseek-v4-flash)"
     }
 
     QUALITY_AXIS {
@@ -322,8 +323,14 @@ REDIS_URL="redis://localhost:6379/0"
 CELERY_BROKER_URL=${REDIS_URL}
 
 # Provedores de Large Language Models
+# OpenCode Go (agregador OpenAI-Compatible).
+OPENAI_BASE_URL="https://opencode.ai/zen/go/v1"
+# Endpoint público que lista os modelos disponíveis.
+# Usado para popular dinamicamente as choices de ProfileConfig.model_name (sem hardcode).
+OPENCODE_MODELS_URL="https://opencode.ai/zen/go/v1/models"
+# Modelo global fallback usado quando o ProfileConfig não define um model_name.
+DEFAULT_MODEL_NAME="deepseek-v4-flash"
 OPENAI_API_KEY="sk-..."
-ANTHROPIC_API_KEY="sk-ant-..."
 
 # Parametrização Global de Limites de Sistema (Fallback)
 MAX_BUDGET_USD_PER_TASK=2.50

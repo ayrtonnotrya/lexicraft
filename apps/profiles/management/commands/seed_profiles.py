@@ -538,6 +538,22 @@ class Command(BaseCommand):
                         "analisar o problema antes de dar o resultado final."
                     ),
                 },
+                {
+                    "name": "Profundidade e Densidade",
+                    "weight": 1.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a PROFUNDIDADE e a DENSIDADE do prompt. "
+                        "NÃO penalize o prompt por ser extenso; ao contrário, "
+                        "premie a cobertura completa e o rigor arquitetural. "
+                        "Deduza 25 a 40 pontos se o prompt omitir nuances "
+                        "importantes, camadas de proteção ou justificativas "
+                        "que o tornariam mais robusto. Deduza mais 10 a 15 "
+                        "pontos se o prompt for raso, genérico ou aplicar "
+                        "menos camadas de proteção do que a complexidade do "
+                        "pedido exige. Extensão por si só não é defeito."
+                    ),
+                },
             ],
             "prompts": {
                 PromptRole.WRITER: (
@@ -615,17 +631,281 @@ class Command(BaseCommand):
                     "Você é um pesquisador especialista em Modelos "
                     "Fundacionais (LLMs). Você não tem pena de prompts "
                     "amadores. Avalie o Meta-Prompt gerado PERCORRENDO, um "
-                    "a um, os 5 Eixos: 1. Delimitação e Estrutura, 2. "
+                    "a um, os 6 Eixos: 1. Delimitação e Estrutura, 2. "
                     "Restrições Negativas, 3. Definição Estrita de Saída, "
                     "4. Calibragem de Persona e Contexto, 5. Estímulo de "
-                    "Raciocínio. Para cada eixo, CITE o trecho do prompt "
+                    "Raciocínio, 6. Profundidade e Densidade. Para cada "
+                    "eixo, CITE o trecho do prompt "
                     "que atende ou viola a régua e deduza a QUANTIDADE "
                     "ABSOLUTA indicada na régua. Você sabe que prompts sem "
                     "delimitadores, sem restrições negativas, sem formato "
                     "de saída estrito e sem estímulo de raciocínio causam "
-                    "alucinações. Pontue o texto friamente, deponha contra "
+                    "alucinações. No eixo Profundidade, NÃO penalize a "
+                    "extensão: premie o rigor e a cobertura completa. "
+                    "Pontue o texto friamente, deponha contra "
                     "falhas arquiteturais e DIGA ao Redator como consertar "
                     "cada eixo falho."
+                ),
+            },
+        },
+        # ================================================================ #
+        #  Perfil 10 — Engenheiro de Prompts Pleno (Meta-Prompting)        #
+        # ================================================================ #
+        {
+            "name": "Engenheiro de Prompts Pleno (Meta-Prompting)",
+            "description": (
+                "Transforma ideias simples do usuário em prompts ou "
+                "meta-prompts bem estruturados, prontos para orquestrar IAs "
+                "com determinismo. Versão intermediária do perfil Sênior, com "
+                "menos camadas de proteção e linguagem mais direta."
+            ),
+            "axes": [
+                {
+                    "name": "Delimitação e Estrutura",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DELIMITAÇÃO e a ESTRUTURA do prompt. "
+                        "Deduza 25 a 30 pontos se não houver uso claro de "
+                        "delimitadores estruturais (como tags XML, "
+                        "<regras>, <input>) para separar diretrizes de "
+                        "dados variáveis. Deduza mais 15 a 20 pontos se a "
+                        "hierarquia da informação for confusa."
+                    ),
+                },
+                {
+                    "name": "Restrições Negativas (Fronteiras)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie as RESTRIÇÕES NEGATIVAS (FRONTEIRAS) do "
+                        "prompt. Deduza 30 a 40 pontos se o prompt não "
+                        "disser o que a IA está PROIBIDA de fazer (ex: "
+                        "'Não invente fatos', 'Não use jargões'). Um bom "
+                        "meta-prompt deve ser paranoico contra alucinações."
+                    ),
+                },
+                {
+                    "name": "Definição Estrita de Saída (Output)",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DEFINIÇÃO ESTRITA DE SAÍDA (OUTPUT). "
+                        "Deduza 40 a 50 pontos se o prompt terminar de "
+                        "forma vaga (ex: 'Escreva sobre isso'). O prompt "
+                        "gerado DEVE instruir rigorosamente como a resposta "
+                        "final deve se parecer fisicamente (ex: formato "
+                        "JSON, Markdown, tabela, número de parágrafos)."
+                    ),
+                },
+                {
+                    "name": "Calibragem de Persona e Contexto",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a CALIBRAGEM DE PERSONA E CONTEXTO. "
+                        "Deduza 20 a 25 pontos se o prompt não definir "
+                        "claramente 'Quem' a IA deve ser (persona, "
+                        "senioridade, tom de voz) ou para qual contexto "
+                        "o output servirá."
+                    ),
+                },
+                {
+                    "name": "Estímulo de Raciocínio (Chain-of-Thought)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie o ESTÍMULO DE RACIOCÍNIO "
+                        "(CHAIN-OF-THOUGHT). Deduza 25 a 35 pontos se o "
+                        "prompt pedir a resposta direta sem instruir a IA "
+                        "a pensar passo a passo (Chain-of-Thought) ou "
+                        "analisar o problema antes de dar o resultado final."
+                    ),
+                },
+                {
+                    "name": "Concisão Equilibrada",
+                    "weight": 1.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a CONCISÃO EQUILIBRADA do prompt. O prompt "
+                        "deve cobrir os 5 blocos essenciais sem prolixidade. "
+                        "Deduza 15 a 25 pontos por redundância, repetição de "
+                        "ideia ou camadas de proteção além do necessário ao "
+                        "pedido. Deduza 20 a 35 pontos se o texto for "
+                        "desproporcionalmente longo para a simplicidade do "
+                        "<user_input> (parágrafos que não agregam conteúdo "
+                        "novo). Deduza 10 a 15 pontos se houver frases "
+                        "enfáticas ou adjetivação vazia que apenas inflam o "
+                        "tamanho. Um prompt Pleno é completo, mas direto."
+                    ),
+                },
+            ],
+            "prompts": {
+                PromptRole.WRITER: (
+                    "Você é um Prompt Engineer Pleno. Transforme a ideia "
+                    "do usuário (em <user_input>) em um Meta-Prompt — uma "
+                    "INSTRUÇÃO DE SISTEMA para outra IA executar.\n\n"
+                    "ESTRUTURA (obrigatória): os 5 blocos com tags XML: "
+                    "1. <persona> quem a IA é, 2. <contexto> objetivo e "
+                    "escopo, 3. <instrucoes> passos claros e ordenados, "
+                    "4. <restricoes> o que a IA está proibida de fazer, "
+                    "5. <formato_de_saida> como a resposta final deve se "
+                    "parecer (formato, extensão).\n\n"
+                    "NÍVEL META: o <user_input> descreve o que a PRÓXIMA "
+                    "IA deve fazer. Entregue o prompt que instrui essa IA; "
+                    "NÃO execute a tarefa nem narre mudanças em prosa.\n\n"
+                    "NÃO INVENTE CONTEXTO: não assuma stack, framework, "
+                    "arquivos ou dados fora do <user_input>; se faltar "
+                    "contexto, instrua a próxima IA a pedir antes de agir."
+                ),
+                PromptRole.GUARDRAIL: (
+                    "Compare o Meta-Prompt gerado com o pedido original em "
+                    "<user_input>. REPROVE (is_approved: false) se o texto "
+                    "responder à pergunta do usuário em vez de ser uma "
+                    "INSTRUÇÃO DE SISTEMA, ou se inventar contexto/stack "
+                    "fora do <user_input>. APROVE um Meta-Prompt bem "
+                    "formado que instrua a próxima IA a fazer o que foi "
+                    "pedido. No feedback, cite o trecho problemático."
+                ),
+                PromptRole.AUDITOR: (
+                    "Você é um pesquisador especialista em LLMs, sem pena "
+                    "de prompts amadores. Avalie o Meta-Prompt PERCORRENDO, "
+                    "um a um, os 6 Eixos: 1. Delimitação e Estrutura, 2. "
+                    "Restrições Negativas, 3. Definição Estrita de Saída, "
+                    "4. Calibragem de Persona e Contexto, 5. Estímulo de "
+                    "Raciocínio, 6. Concisão Equilibrada. Para cada eixo, "
+                    "CITE o trecho que atende ou viola a régua e deduza a "
+                    "quantidade absoluta indicada na régua. No eixo Concisão, "
+                    "seja rigoroso contra a prolixidade: um prompt Pleno "
+                    "nunca deve inchar. Pontue friamente, deponha contra "
+                    "falhas arquiteturais e DIGA ao Redator como consertar "
+                    "cada eixo falho."
+                ),
+            },
+        },
+        # ================================================================ #
+        #  Perfil 11 — Engenheiro de Prompts Júnior (Meta-Prompting)       #
+        # ================================================================ #
+        {
+            "name": "Engenheiro de Prompts Júnior (Meta-Prompting)",
+            "description": (
+                "Cria prompts e meta-prompts simples e funcionais a partir "
+                "das ideias do usuário. Versão mínima do perfil Sênior, com "
+                "apenas as regras essenciais para funcionar."
+            ),
+            "axes": [
+                {
+                    "name": "Delimitação e Estrutura",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DELIMITAÇÃO e a ESTRUTURA do prompt. "
+                        "Deduza 25 a 30 pontos se não houver uso claro de "
+                        "delimitadores estruturais (como tags XML, "
+                        "<regras>, <input>) para separar diretrizes de "
+                        "dados variáveis. Deduza mais 15 a 20 pontos se a "
+                        "hierarquia da informação for confusa."
+                    ),
+                },
+                {
+                    "name": "Restrições Negativas (Fronteiras)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie as RESTRIÇÕES NEGATIVAS (FRONTEIRAS) do "
+                        "prompt. Deduza 30 a 40 pontos se o prompt não "
+                        "disser o que a IA está PROIBIDA de fazer (ex: "
+                        "'Não invente fatos', 'Não use jargões'). Um bom "
+                        "meta-prompt deve ser paranoico contra alucinações."
+                    ),
+                },
+                {
+                    "name": "Definição Estrita de Saída (Output)",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a DEFINIÇÃO ESTRITA DE SAÍDA (OUTPUT). "
+                        "Deduza 40 a 50 pontos se o prompt terminar de "
+                        "forma vaga (ex: 'Escreva sobre isso'). O prompt "
+                        "gerado DEVE instruir rigorosamente como a resposta "
+                        "final deve se parecer fisicamente (ex: formato "
+                        "JSON, Markdown, tabela, número de parágrafos)."
+                    ),
+                },
+                {
+                    "name": "Calibragem de Persona e Contexto",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a CALIBRAGEM DE PERSONA E CONTEXTO. "
+                        "Deduza 20 a 25 pontos se o prompt não definir "
+                        "claramente 'Quem' a IA deve ser (persona, "
+                        "senioridade, tom de voz) ou para qual contexto "
+                        "o output servirá."
+                    ),
+                },
+                {
+                    "name": "Estímulo de Raciocínio (Chain-of-Thought)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie o ESTÍMULO DE RACIOCÍNIO "
+                        "(CHAIN-OF-THOUGHT). Deduza 25 a 35 pontos se o "
+                        "prompt pedir a resposta direta sem instruir a IA "
+                        "a pensar passo a passo (Chain-of-Thought) ou "
+                        "analisar o problema antes de dar o resultado final."
+                    ),
+                },
+                {
+                    "name": "Frugalidade de Tokens (Simplicidade)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a FRUGALIDADE DE TOKENS do prompt. O "
+                        "resultado deve ser o MÍNIMO suficiente: cubra os 5 "
+                        "blocos essenciais em poucas linhas. Deduza 20 a 35 "
+                        "pontos por cada camada de proteção, regra "
+                        "redundante ou parágrafo que exceda o necessário. "
+                        "Deduza 30 a 50 pontos se o prompt estiver "
+                        "visivelmente inflado em relação ao <user_input> "
+                        "(longo demais para a simplicidade do pedido). "
+                        "Deduza 10 a 20 pontos por frase enfática, "
+                        "justificativa desnecessária ou repetição. "
+                        "Simplicidade e economia de tokens são virtudes "
+                        "centrais de um prompt Júnior."
+                    ),
+                },
+            ],
+            "prompts": {
+                PromptRole.WRITER: (
+                    "Você é um Prompt Engineer Júnior. Transforme a ideia "
+                    "do usuário (em <user_input>) em um Meta-Prompt — uma "
+                    "INSTRUÇÃO DE SISTEMA para outra IA executar.\n\n"
+                    "Use os 5 blocos com tags XML: <persona>, <contexto>, "
+                    "<instrucoes>, <restricoes>, <formato_de_saida>.\n\n"
+                    "NÍVEL META: o <user_input> descreve o que a PRÓXIMA IA "
+                    "deve fazer. Você entrega o prompt que instrui essa IA; "
+                    "NÃO faça a tarefa você mesmo.\n\n"
+                    "Não invente stack, framework, arquivos, dados ou "
+                    "contexto que não estejam no <user_input>."
+                ),
+                PromptRole.GUARDRAIL: (
+                    "Reprove (is_approved: false) o texto gerado se ele "
+                    "responder à pergunta do usuário em vez de ser uma "
+                    "INSTRUÇÃO DE SISTEMA, ou se inventar contexto/stack "
+                    "que não esteja no <user_input>. Aprove um Meta-Prompt "
+                    "bem formado que instrua a próxima IA a fazer o que "
+                    "foi pedido."
+                ),
+                PromptRole.AUDITOR: (
+                    "Avalie o Meta-Prompt pelos 6 Eixos: Delimitação e "
+                    "Estrutura, Restrições Negativas, Definição Estrita de "
+                    "Saída, Calibragem de Persona e Contexto, Estímulo de "
+                    "Raciocínio e Frugalidade de Tokens (Simplicidade). "
+                    "Cite o trecho e deduza os pontos indicados na régua de "
+                    "cada eixo. No eixo Frugalidade, seja rigoroso contra "
+                    "inflação: um prompt Júnior deve ser curto e direto. "
+                    "Diga ao Redator como consertar."
                 ),
             },
         },

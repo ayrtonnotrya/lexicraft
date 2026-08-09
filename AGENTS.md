@@ -309,3 +309,29 @@ Toda alteração ou nova funcionalidade DEVE vir acompanhada de testes unitário
 * **NÃO crie um frontend React, Vue ou Single Page Application (SPA) separado.** Mantenha a simplicidade arquitetural com Django Templates + HTMX + Tailwind CSS.
 * **NÃO hardcode prompts no código-fonte.** Prompts base, subprompts de eixos e diretrizes do guard-rail devem ser armazenados no banco de dados e gerenciáveis via admin/interface.
 * **NÃO permita que erros não tratados na API do LLM quebrem o Worker do Celery.** Implemente blocos de captura com *retries* controlados e log estruturado.
+
+---
+
+## 9. Execução de Comandos via Docker (Regra Obrigatória)
+
+O LexiCraft roda, em desenvolvimento e produção, **sempre via Docker Compose** (serviços `web`, `worker`, `beat`, `db` em Postgres, `redis`). O banco de verdade é o Postgres do container, **não** o `db.sqlite3` local da raiz.
+
+### A. Verifique o Docker ANTES de qualquer comando que toque banco/infraestrutura
+Antes de rodar `migrate`, `seed_profiles`, `collectstatic`, scripts de dados ou qualquer comando `manage.py` que leia/escreva no banco, o agente DEVE:
+1. Confirmar que os containers estão de pé: `docker compose ps`.
+2. Executar o comando **dentro** do container `web`: `docker compose exec -T web python manage.py <comando>`.
+3. NUNCA rodar esses comandos no `.venv` local — eles operariam sobre o `db.sqlite3` local, divergindo do ambiente real.
+
+### B. Exemplos de execução correta
+```bash
+docker compose ps
+docker compose exec -T web python manage.py migrate
+docker compose exec -T web python manage.py seed_profiles
+docker compose exec -T web python manage.py collectstatic --noinput
+```
+
+### C. Quando o ambiente roda fora do Docker
+Exceção: a suíte de testes (`pytest`) usa `pytest-django` com SQLite e pode rodar no `.venv` local, pois é isolada do banco de produção. Qualquer comando com efeito persistente no banco do app DEVE ir pelo Docker.
+
+### D. Se o Docker não estiver rodando
+Se `docker compose ps` não mostrar os containers ativos, **NÃO** despeje comandos `manage.py` no `.venv` local como substituto silencioso. Avise o usuário e pergunte se ele quer subir a stack (`docker compose up -d --build`) antes de prosseguir.

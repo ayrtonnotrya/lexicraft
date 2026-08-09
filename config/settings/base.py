@@ -171,6 +171,11 @@ MAX_ITERATIONS_PER_TASK = config('MAX_ITERATIONS_PER_TASK', default=3, cast=int)
 NASH_TARGET_SCORE = 0.95
 NASH_EPSILON = 0.02
 
+# Janela de tolerância do Ceifador de Zumbis (segundos). Deve cobrir o pior
+# caso de um tribunal paralelo com desempate (2-3 LLM calls em sequência dentro
+# de um único asyncio.run) para não abater tasks vivas e lentas.
+REAPER_ZOMBIE_WINDOW_SECONDS = config('REAPER_ZOMBIE_WINDOW_SECONDS', default=240, cast=int)
+
 # Logging estruturado.
 LOGGING = {
     'version': 1,

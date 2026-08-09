@@ -147,7 +147,7 @@ def task_detail(request: HttpRequest, task_id: int) -> HttpResponse:
     task = get_object_or_404(TaskExecution, pk=task_id, user=request.user)
     is_stale = False
     if task.status == 'RUNNING' and task.last_heartbeat_at:
-        is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > 120
+        is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
     axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
     return render(request, 'dashboard/task_detail.html', {
         'task': task, 'is_stale': is_stale, 'axes_by_id': axes_by_id,
@@ -166,7 +166,7 @@ def task_status_partial(request: HttpRequest, task_id: int) -> HttpResponse:
     # morrido (mesmo antes do Ceifador marcar formalmente FAILED_TIMEOUT).
     is_stale = False
     if task.status == 'RUNNING' and task.last_heartbeat_at:
-        is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > 120
+        is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
 
     axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
     return render(request, 'partials/task_progress.html', {
@@ -207,7 +207,7 @@ def cancel_task(request: HttpRequest, task_id: int) -> HttpResponse:
     if _is_htmx(request):
         is_stale = False
         if task.status == 'RUNNING' and task.last_heartbeat_at:
-            is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > 120
+            is_stale = (timezone.now() - task.last_heartbeat_at).total_seconds() > settings.REAPER_ZOMBIE_WINDOW_SECONDS
         axes_by_id = {ax.id: ax.name for ax in task.profile.axes.all()}
         return render(request, 'partials/task_progress.html', {
             'task': task, 'is_stale': False, 'axes_by_id': axes_by_id,

@@ -17,6 +17,7 @@ import logging
 from datetime import timedelta
 from decimal import Decimal
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
 
@@ -184,6 +185,19 @@ async def _call_tribunal_auditor(task, system_prompt, text, valid_axis_ids, axes
     return result['parsed_payload'], result['prompt_tokens'], result['completion_tokens']
 
 
+async def _touch_heartbeat(task):
+    """Bate o heartbeat do Worker sem bloquear o event loop do tribunal.
+
+    O Tribunal Paralelo executa múltiplos LLM calls de longa duração dentro de
+    um único `asyncio.run`. Sem atualização de `last_heartbeat_at` entre eles,
+    o Ceifador de Zumbis (janela de 120s+) pode classificar uma task VIVA e
+    lenta como zumbi e abortá-la falsamente (race condition). A atualização é
+    delegada ao thread pool via `sync_to_async` para evitar o
+    SynchronousOnlyOperation do Django em código async.
+    """
+    await sync_to_async(_set_step)(task, task.current_step)
+
+
 def _run_tribunal(task, system_prompt, text, valid_axis_ids, axes, model, bases):
     """Executa o Tribunal Paralelo e o desempate condicional (3º Corretor).
 
@@ -195,6 +209,7 @@ def _run_tribunal(task, system_prompt, text, valid_axis_ids, axes, model, bases)
          prompt_tokens_total, completion_tokens_total)
     """
     async def _run():
+        await _touch_heartbeat(task)
         results = await asyncio.gather(
             _call_tribunal_auditor(task, system_prompt, text, valid_axis_ids, axes, model),
             _call_tribunal_auditor(task, system_prompt, text, valid_axis_ids, axes, model),
@@ -206,6 +221,7 @@ def _run_tribunal(task, system_prompt, text, valid_axis_ids, axes, model, bases)
         completion_total = results[0][2] + results[1][2]
 
         if evaluate_tribunal_divergence(ded1, ded2, bases, threshold=DIVERGENCE_THRESHOLD):
+            await _touch_heartbeat(task)
             third = await _call_tribunal_auditor(task, system_prompt, text, valid_axis_ids, axes, model)
             ded3 = _extract_deductions(third[0])
             auditors.append(third[0])
@@ -501,12 +517,13 @@ def reap_zombie_tasks() -> int:
 
     Fonte da verdade: docs/AGENTS.md (Sessão 5.E).
 
-    Janela de tolerância: 120s. O Worker síncrono pode ficar múltiplos
-    segundos sem atualizar `last_heartbeat_at` durante uma chamada LLM de
-    longa duração (Redator/Corretores) — 60s era agressivo demais e gerava
-    race condition travando tasks vias.
+    A janela de tolerância é centralizada em
+    `settings.REAPER_ZOMBIE_WINDOW_SECONDS` (padrão 240s) e deve cobrir o pior
+    caso do Tribunal Paralelo com desempate (2-3 LLM calls de longa duração em
+    sequência dentro de um único `asyncio.run`). Janelas menores (60s/120s)
+    geravam abates falsos de tasks vivas e lentas (race condition).
     """
-    threshold = _now() - timedelta(seconds=120)
+    threshold = _now() - timedelta(seconds=settings.REAPER_ZOMBIE_WINDOW_SECONDS)
     zombies = TaskExecution.objects.filter(status=TaskStatus.RUNNING, last_heartbeat_at__lt=threshold)
     count = 0
     for task in zombies:

@@ -200,6 +200,40 @@ def test_cenario_e_rollback_orcamento(mock_writer, mock_guardrail, mock_auditor,
 
 
 # ---------------------------------------------------------------------------
+# Cenário E2: T_max estourado é checado ANTES de iniciar a 2ª iteração cara.
+# Para textos longos, uma única iteração pode ultrapassar o orçamento de tempo;
+# checar só no fim desperdiçava a iteração que acabara de ser paga.
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db(transaction=True)
+@patch(PATCH_AUDITOR)
+@patch(PATCH_GUARDRAIL)
+@patch(PATCH_WRITER)
+@patch('apps.orchestrator.tasks._time_budget_exceeded')
+def test_cenario_e2_tmax_checka_antes_da_iteracao(
+    mock_time_budget, mock_writer, mock_guardrail, mock_auditor, task_execution_factory
+):
+    task = task_execution_factory(max_iterations=3)
+    mock_writer.return_value = writer_result()
+    mock_guardrail.return_value = _approved()
+    # Dedução 20 em ambos os eixos -> W = 0.80 (não converge; precisa de 2ª iteração).
+    ded20 = auditor_result(build_mock_auditor_payload(VALID_AXIS_IDS, {1: 20.0, 2: 20.0}))
+    mock_auditor.return_value = ded20
+
+    # 1ª chamada = fim da iteração 1 (orçamento ainda OK, segue adiante).
+    # 2ª chamada = início da iteração 2 (T_max estourado -> Rollback imediato).
+    mock_time_budget.side_effect = [False, True]
+
+    run_optimization_pipeline(task.id)
+
+    task.refresh_from_db()
+    assert task.status == TaskStatus.COMPLETED_WITH_ROLLBACK
+    # A 2ª iteração NUNCA foi iniciada: o Redator rodou apenas 1 vez.
+    assert mock_writer.await_count == 1
+    assert task.snapshots.count() == 1
+    assert task.final_score == pytest.approx(0.80, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
 # Cenário F: Rollback por Estagnação de Epsilon (Delta W < Epsilon)
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db(transaction=True)

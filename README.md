@@ -71,7 +71,7 @@ Copie o arquivo de exemplo e preencha com suas credenciais:
 ```bash
 cp .env.example .env
 ```
-Certifique-se de configurar a `OPENAI_API_KEY` (ou chave compatível) e a `CELERY_BROKER_URL` (ex: `redis://localhost:6379/0`).
+Certifique-se de configurar a `OPENAI_API_KEY` do provedor **OpenCode Go** (endpoint OpenAI-Compatible em `OPENAI_BASE_URL`, default `https://opencode.ai/zen/go/v1`) e a `CELERY_BROKER_URL` (ex: `redis://localhost:6379/0`). O modelo global fallback é definido em `DEFAULT_MODEL_NAME` (ex: `deepseek-v4-flash`); cada `ProfileConfig` pode sobrescrever com um `model_name` próprio.
 
 ### 3. Banco de Dados e Migrações
 ```bash
@@ -104,7 +104,7 @@ Acesse `http://localhost:8000` para a interface principal e `http://localhost:80
 
 ## 🐳 Rodando com Docker (Recomendado)
 
-A aplicação é totalmente conteinerizada com um **único `docker-compose.yml`** que sobe os 5 serviços: `db` (PostgreSQL), `redis` (broker), `web` (Django + gunicorn), `worker` (Celery) e `beat` (Ceifador de Zumbis).
+A aplicação é totalmente conteinerizada com um **único `docker-compose.yml`** que sobe os 5 serviços: `db` (PostgreSQL), `redis` (broker), `web` (Django + gunicorn), `worker` (Celery) e `beat` (Ceifador de Zumbis). Um arquivo opcional `docker-compose.override.yml` ativa o **modo de desenvolvimento** (bind-mount do código-fonte + `runserver` com auto-reload + porta `8000` exposta), carregado automaticamente apenas em execuções locais — produção não é afetada.
 
 ### Pré-requisitos
 * [Docker](https://docs.docker.com/engine/install/) + [Docker Compose](https://docs.docker.com/compose/install/) (ou Docker Desktop)
@@ -112,8 +112,13 @@ A aplicação é totalmente conteinerizada com um **único `docker-compose.yml`*
 ### 1. Configurar o ambiente
 ```bash
 cp .env.example .env
-# Preencha OPENAI_API_KEY (e ajuste APP_ENV, credenciais e limites)
+# Preencha OPENAI_API_KEY (chave do provedor OpenCode Go), APP_ENV, credenciais e limites
 ```
+
+> O serviço `web` ingressa numa rede externa chamada `web` (reverse proxy) para exposição via domínio/TLS. Crie-a antes do primeiro `up` se for usá-la:
+> ```bash
+> docker network create web
+> ```
 
 ### 2. Subir a stack
 ```bash
@@ -140,8 +145,18 @@ Um único compose atende os dois ambientes via `.env`:
 
 ### Comportamentos automáticos
 * **Migrações:** `python manage.py migrate` roda no start do `web`.
-* **Seeder:** `python manage.py seed_profiles` roda no start (idempotente — cria os 9 perfis e o admin, sem resetar senha de admin existente).
+* **Seeder:** `python manage.py seed_profiles` roda no start (idempotente — cria os 7 perfis e o admin, sem resetar senha de admin existente).
 * **Estáticos:** `collectstatic` + **WhiteNoise** servem os assets do admin sem nginx extra.
+
+#### Perfis out-of-the-box (seeder)
+O `seed_profiles` popula 7 perfis de geração prontos para uso:
+1. **E-mail Corporativo de Alto Impacto** — clareza, tom profissional e CTA.
+2. **Carta de Amor** — carga emocional, criatividade poética e fluidez.
+3. **Trabalho de Escola (Ensaio Acadêmico)** — rigor gramatical, coesão e densidade argumentativa.
+4. **Engenheiro de Prompts Sênior (Meta-Prompting)** — meta-prompts arquiteturais com delimitadores XML, restrições negativas e Chain-of-Thought.
+5. **Engenheiro de Prompts Pleno (Meta-Prompting)** — versão intermediária com concisão equilibrada.
+6. **Engenheiro de Prompts Júnior (Meta-Prompting)** — versão mínima com frugalidade de tokens.
+7. **Refatoração de README.md** — especializado em clareza de proposta de valor, escaneabilidade Markdown, tom anti-fluff e delimitação de escopo.
 
 ### Comandos úteis
 ```bash

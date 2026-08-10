@@ -1,4 +1,4 @@
-"""Management Command idempotente que povoa o banco com 9 Perfis de Geração
+"""Management Command idempotente que povoa o banco com 7 Perfis de Geração
 out-of-the-box (E-mail Corporativo, Carta de Amor, Ensaio Acadêmico, ... e
 Engenheiro de Prompts Sênior).
 
@@ -20,7 +20,7 @@ User = get_user_model()
 
 class Command(BaseCommand):
     help = (
-        "Cria (ou atualiza) 9 Perfis de Geração out-of-the-box com seus "
+        "Cria (ou atualiza) 7 Perfis de Geração out-of-the-box com seus "
         "Eixos de Qualidade e Prompts de Sistema: E-mail Corporativo, "
         "Carta de Amor, Trabalho de Escola (Ensaio Acadêmico), ... e "
         "Engenheiro de Prompts Sênior (Meta-Prompting)."
@@ -909,6 +909,288 @@ class Command(BaseCommand):
                 ),
             },
         },
+        # ================================================================ #
+        #  Perfil — Refatoração de README.md                                 #
+        # ================================================================ #
+        {
+            "name": "Refatoração de README.md",
+            "description": (
+                "Transforma rascunhos densos ou brain-dumps de projeto em "
+                "READMEs escaneáveis, profissionais e focados no "
+                "desenvolvedor. Reestrutura a hierarquia Markdown, adota um "
+                "tom anti-marketing e isola as instruções técnicas. Nunca "
+                "inventa comandos, snippets, URLs ou features ausentes do "
+                "texto de entrada."
+            ),
+            "axes": [
+                {
+                    "name": "Clareza da Proposta de Valor (Elevator Pitch)",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a CLAREZA DA PROPOSTA DE VALOR. O README "
+                        "deve responder, nas primeiras linhas, ao "
+                        "trinômio 'O QUE é / PARA QUEM é / POR QUE usar', "
+                        "sem forçar o leitor a cavar a informação. Deduza "
+                        "pontos absolutos proporcionalmente quando:\n"
+                        "- Não existir uma frase-tese no topo que diga o "
+                        "que o projeto faz em uma única leitura;\n"
+                        "- O propósito for vago, genérico ou tautológico "
+                        "('é uma ferramenta incrível para coisas úteis');\n"
+                        "- O público-alvo ou caso de uso principal não "
+                        "estiver identificado;\n"
+                        "- A proposta de valor estiver enterrada após "
+                        "blocos de créditos, agradecimentos ou badges "
+                        "irrelevantes no topo do documento;\n"
+                        "- A promessa do projeto destoar do que o restante "
+                        "do README demonstra (hiperpromessa).\n"
+                        "A pontuação plena exige que um visitante aleatório "
+                        "entenda o valor do projeto em menos de 10 segundos."
+                    ),
+                },
+                {
+                    "name": "Arquitetura Markdown e Escaneabilidade",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a ARQUITETURA MARKDOWN e a "
+                        "ESCANEABILIDADE. Deduza pontos absolutos quando:\n"
+                        "- Existir parede de texto: parágrafos longos sem "
+                        "quebra que poderiam virar listas, tabelas ou "
+                        "blocos de código;\n"
+                        "- A hierarquia de títulos for incorreta ou "
+                        "quebrada (pular níveis, usar H1 para subseções, "
+                        "não aninhar corretamente H2/H3);\n"
+                        "- A estrutura de seções for confusa ou sem ordem "
+                        "lógica de leitura (instalação antes da descrição, "
+                        "exemplos espalhados);\n"
+                        "- Listas aninhadas, tabelas, blocos de citação ou "
+                        "sintaxe Markdown avançada forem mal utilizadas ou "
+                        "inconsistentes entre si;\n"
+                        "- Não houver índice/TOC útil ou atalhos de "
+                        "navegação quando o documento for extenso;\n"
+                        "- Trechos de código estiverem sem sintaxe "
+                        "destaqueada (linguagem ausente nos fences).\n"
+                        "A pontuação plena exige que o leitor consiga "
+                        "escanear o documento e localizar qualquer seção "
+                        "em segundos."
+                    ),
+                },
+                {
+                    "name": "Tom Desenvolvedor (Anti-Marketing e Anti-Fluff)",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie o TOM DESENVOLVEDOR (ANTI-MARKETING e "
+                        "ANTI-FLUFF). Deduza pontos absolutos quando:\n"
+                        "- Houver adjetivação vazia e superlativos de "
+                        "marketing ('incrível', 'revolucionário', 'a "
+                        "melhor lib do mundo', 'mágico', 'poderoso', "
+                        "'definitivo') sem evidência técnica;\n"
+                        "- O tom soar como pitch de vendedor, com "
+                        "exclamações, promessas grandiosas ou apelo "
+                        "emocional em vez de clareza técnica;\n"
+                        "- Existir jargão corporativo ou palavras-cola "
+                        "('sinergia', 'solução end-to-end', 'turbine seu "
+                        "fluxo de trabalho') que não agregam informação;\n"
+                        "- O texto flertar com clickbait ou hype que "
+                        "sobrepromete o que o projeto entrega de fato;\n"
+                        "- Hobbies desnecessários, elogios a si mesmo ou "
+                        "agradecimentos inflados poluírem a leitura.\n"
+                        "O tom ideal é factual, direto e utilitário: "
+                        "respeita a inteligência do leitor e deixa o "
+                        "código falar por si."
+                    ),
+                },
+                {
+                    "name": "Progressão Lógica e Isolamento de Instruções Técnicas",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a PROGRESSÃO LÓGICA e o ISOLAMENTO DE "
+                        "INSTRUÇÕES TÉCNICAS. Deduza pontos absolutos "
+                        "quando:\n"
+                        "- A ordem das seções não seguir um fluxo natural "
+                        "de adoção (contexto -> instalação -> uso -> "
+                        "configuração -> contribuição);\n"
+                        "- Instruções de execução (comandos de terminal, "
+                        "blocos de código) estiverem misturadas em "
+                        "parágrafos narrativos em vez de isoladas em "
+                        "blocos de código dedicados;\n"
+                        "- Comandos, flags, variáveis de ambiente ou "
+                        "passos técnicos estiverem intercalados com "
+                        "prosa explicativa sem separação visual clara;\n"
+                        "- O leitor precisar adivinhar a ordem de "
+                        "execução dos passos (passo 3 antes do passo 1);\n"
+                        "- Snippets não estiverem precedidos de contexto "
+                        "curto do que fazem nem de qual arquivo/ambiente "
+                        "pertencem.\n"
+                        "A pontuação plena exige que qualquer dev consiga "
+                        "reproduzir o projeto seguindo apenas os blocos "
+                        "técnicos isolados, na ordem apresentada."
+                    ),
+                },
+                {
+                    "name": "Delimitação de Fronteiras (Escopo e Limitações)",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a DELIMITAÇÃO DE FRONTEIRAS (ESCOPO E "
+                        "LIMITAÇÕES). Deduza pontos absolutos quando:\n"
+                        "- Não existir uma seção clara de escopo que "
+                        "diga o que o projeto FAZ e, sobretudo, o que "
+                        "ele NÃO faz;\n"
+                        "- Limitações, trade-offs e dependências de "
+                        "versão/sistema não forem explicitadas;\n"
+                        "- O README prometer compatibilidade, plataformas "
+                        "ou funcionalidades que o código real não "
+                        "entrega (fronteira ultrapassada por "
+                        "alucinação);\n"
+                        "- Instruções de instalação forem "
+                        "incondicionalmente prescritivas ('use X para "
+                        "tudo') sem advertir quando o caminho alternativo "
+                        "é necessário;\n"
+                        "- Licença, requisitos de sistema ou status de "
+                        "manutenção (alpha, beta, arquivado) estiverem "
+                        "ausentes quando relevantes ao leitor.\n"
+                        "A pontuação plena exige que o leitor saiba "
+                        "exatamente o que esperar — e o que não "
+                        "esperar — do projeto."
+                    ),
+                },
+            ],
+            "prompts": {
+                PromptRole.WRITER: (
+                    "Você é um Tech Lead de um projeto open-source "
+                    "reconhecido, mantenedor de repositórios de grande "
+                    "relevância. Você recebeu um rascunho ou "
+                    "brain-dump do usuário dentro de <user_input> — "
+                    "possivelmente desorganizado, com ideias soltas, "
+                    "comandos perdidos no meio da prosa e explicações mal "
+                    "formatadas. Sua missão é refatorar esse material em um "
+                    "README.md impecável.\n\n"
+                    "DIRETRIZES DE FORMATAÇÃO:\n"
+                    "1. Aplique hierarquia Markdown impecável: um único H1 "
+                    "com o nome do projeto, H2 para seções principais e H3 "
+                    "apenas para subseções, sem pular níveis.\n"
+                    "2. Use sintaxe Markdown avançada onde ela agrega: "
+                    "blocos de código com a linguagem destacada nos fences, "
+                    "tabelas para comparativos/parâmetros, blocos de "
+                    "citação para avisos e listas aninhadas para passos.\n"
+                    "3. Quebre paredes de texto: transforme parágrafos "
+                    "densos em bullets, tabelas e trechos destacados para "
+                    "máxima escaneabilidade.\n"
+                    "4. Abra com um Elevator Pitch direto que responda ao "
+                    "que o projeto faz, para quem é e por que usar, sem "
+                    "exageros.\n"
+                    "5. Organize numa progressão lógica: contexto -> "
+                    "instalação -> uso -> configuração -> contribuição. "
+                    "Isole Toda instrução técnica em blocos de código "
+                    "próprios, com contexto curto antes e ordem de execução "
+                    "explícita.\n\n"
+                    "TOM (REGRAS DE OURO):\n"
+                    "6. Seja factual, direto e anti-marketing. Elimine "
+                    "adjetivos inúteis, superlativos vazios, hype, "
+                    "exclamações e palavras-cola corporativas. Respeite a "
+                    "inteligência do leitor: o código e a clareza falam por "
+                    "si.\n"
+                    "7. Inclua delimitação de fronteiras: uma seção que "
+                    "declare o escopo e as limitações reais do projeto, "
+                    "sem prometer o que não entrega.\n\n"
+                    "FIDELIDADE ABSOLUTA (PROIBIÇÃO DE INVENTAR):\n"
+                    "8. Você NÃO tem acesso ao repositório. É "
+                    "ESTRITAMENTE PROIBIDO inventar comandos de CLI (ex.: "
+                    "npm install pacote-inventado), flags de terminal, "
+                    "snippets de código, URLs, versões, dependências, "
+                    "nomes de arquivos ou funcionalidades que NÃO estejam "
+                    "literalmente no <user_input>. Se o rascunho omite uma "
+                    "informação técnica, omita-a também no README (ou "
+                    "marque como a preencher) — nunca a fabrique. Reordene "
+                    "e reformate apenas o que foi fornecido."
+                ),
+                PromptRole.GUARDRAIL: (
+                    "Você é o Agente Guard-rail de Fidelidade e Escopo "
+                    "para refatoração de READMEs. Sua função é impedir que "
+                    "o texto final alucine informação técnica que não "
+                    "existe no rascunho original.\n\n"
+                    "REPROVE (is_approved: false) SUMARIAMENTE se o texto "
+                    "final contiver qualquer um dos seguintes elementos que "
+                    "NÃO estavam presentes no <user_input>:\n"
+                    "- Bibliotecas, pacotes ou dependências não citados "
+                    "(ex.: 'npm install pacote-inventado');\n"
+                    "- Comandos de terminal, flags de CLI ou invocações de "
+                    "ferramentas inventadas;\n"
+                    "- Snippets de código, blocos, funções, classes ou "
+                    "APIs que não constavam do rascunho;\n"
+                    "- URLs, links de documentação, repositórios externos "
+                    "ou CDNs fabricados;\n"
+                    "- Versões, números de release, datas de "
+                    "compatibilidade ou requisitos de sistema inventados;\n"
+                    "- Funcionalidades, features, badges ou status que o "
+                    "projeto não demonstra no texto de entrada.\n"
+                    "Também REPROVE se o tom deslizar para marketing "
+                    "superlativo, se a hierarquia Markdown estiver "
+                    "gravemente quebrada ou se a proposta de valor não "
+                    "refletir o escopo real do rascunho.\n"
+                    "APROVE apenas se o documento permanecer 100% fiel ao "
+                    "<user_input>, sem nenhuma invenção, e tecnicamente "
+                    "honesto quanto a escopo e limitações."
+                ),
+                PromptRole.AUDITOR: (
+                    "Você é um mantenedor rigoroso de projetos open-source "
+                    "de nível CNCF, membro do comitê de review de "
+                    "READMEs de repositórios aclamados. Você não tem pena "
+                    "de documentação amadora. A escala NÃO é 0-10: cada "
+                    "eixo tem uma NOTA BASE própria (Clareza=100, "
+                    "Arquitetura Markdown=100, Tom=100, Progressão "
+                    "Lógica=100, Fronteiras=80). Você deduz uma QUANTIDADE "
+                    "ABSOLUTA dessas bases, e SOMA por eixo. Referência:\n"
+                    "- Proposta de valor ausente ou enterrada no topo do "
+                    "documento: 30 a 50 pts no Eixo Clareza (base 100).\n"
+                    "- Elevator pitch vago, genérico ou tautológico: 20 a "
+                    "40 pts no Eixo Clareza.\n"
+                    "- Parede de texto sem bullet points que virariam "
+                    "lista/tabela: 30 a 50 pts no Eixo Arquitetura "
+                    "Markdown.\n"
+                    "- Hierarquia de títulos incorreta ou quebrada "
+                    "(pulos de nível, H1 em subseções): 25 a 45 pts no "
+                    "Eixo Arquitetura Markdown.\n"
+                    "- Blocos de código sem linguagem destacada ou "
+                    "instruções técnicas misturadas à prosa: 20 a 40 pts "
+                    "no Eixo Arquitetura Markdown.\n"
+                    "- Adjetivação vazia/superlativos de marketing "
+                    "('incrível', 'revolucionário', 'melhor do mundo'): "
+                    "20 a 40 pts no Eixo Tom (base 100).\n"
+                    "- Tom de pitch de vendedor ou hype que sobrepromete: "
+                    "30 a 55 pts no Eixo Tom.\n"
+                    "- Palavras-cola corporativas ('sinergia', 'solução "
+                    "end-to-end') sem conteúdo: 15 a 30 pts no Eixo Tom.\n"
+                    "- Ordem de seções sem fluxo natural de adoção: 25 a "
+                    "40 pts no Eixo Progressão Lógica (base 100).\n"
+                    "- Comandos/snippets intercalados em parágrafos sem "
+                    "blocos isolados ou ordem de execução ambígua: 30 a "
+                    "50 pts no Eixo Progressão Lógica.\n"
+                    "- Ausência de seção de escopo/limitações: 20 a 40 pts "
+                    "no Eixo Fronteiras (base 80).\n"
+                    "- Promessa de compatibilidade/feature que o projeto "
+                    "não entrega (fronteira ultrapassada): 40 a 60 pts no "
+                    "Eixo Fronteiras — imperdoável, é alucinação de "
+                    "escopo.\n"
+                    "PROCEDIMENTO: faça DUAS passagens sobre o texto. Na "
+                    "primeira, varra a escaneabilidade (hierarquia, "
+                    "estrutura, uso de Markdown). Na segunda, varra a "
+                    "fidelidade: identifique QUALQUER comando, snippet, URL "
+                    "ou feature que pareça inventado e deduza severamente "
+                    "no eixo Fronteiras. CITE o trecho exato onde cada "
+                    "infração ocorre e DIGA ao Redator como consertar "
+                    "(qual seção reordenar, qual adjetivo cortar, qual "
+                    "comando suspeito remover). Seja econômico em elogios "
+                    "e generoso em deduções: uma documentação excelente não é "
+                    "a que impressiona, é a que engana o leitor o mínimo "
+                    "possível e o leva à ação com zero atrito."
+                ),
+            },
+        },
     ]
 
     # ------------------------------------------------------------------ #
@@ -956,10 +1238,11 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "Confirmada a criação de todos os 9 perfis do LexiCraft: "
+                "Confirmada a criação de todos os 7 perfis do LexiCraft: "
                 "E-mail Corporativo, Carta de Amor, Trabalho de Escola "
-                "(Ensaio Acadêmico), ... e Engenheiro de Prompts Sênior "
-                "(Meta-Prompting) — todos idempotentes e prontos para uso."
+                "(Ensaio Acadêmico), Engenheiro de Prompts Sênior/Pleno/Júnior "
+                "(Meta-Prompting) e Refatoração de README.md — todos "
+                "idempotentes e prontos para uso."
             )
         )
 

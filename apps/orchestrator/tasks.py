@@ -313,6 +313,19 @@ def run_optimization_pipeline(self, task_execution_id: int) -> None:
             _handle_cancellation(task_execution)
             return
 
+        # Estouro de Tempo (T_max) e Isocusto (C_max) checados ANTES de iniciar
+        # uma iteração cara: para textos longos, uma iteração (Redator +
+        # Guard-rail + Tribunal) pode sozinha ultrapassar o orçamento de tempo.
+        # Checar só no fim desperdiçava a iteração que acabara de ser paga.
+        if _time_budget_exceeded(task_execution):
+            _set_step(task_execution, "Tempo limite excedido (T_max). Executando Rollback.")
+            _rollback(task_execution)
+            return
+        if Decimal(task_execution.accumulated_cost_usd) >= task_execution.max_budget_usd:
+            _set_step(task_execution, "Orçamento excedido (C_max). Executando Rollback.")
+            _rollback(task_execution)
+            return
+
         task_execution.current_iteration = iteration
         task_execution.save(update_fields=['current_iteration', 'updated_at'])
 

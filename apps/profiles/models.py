@@ -27,7 +27,7 @@ class ProfileConfig(TimeStampedModel):
     default_max_iterations = models.PositiveSmallIntegerField(default=3)
     default_max_budget_usd = models.DecimalField(max_digits=6, decimal_places=4, default=2.50)
     default_max_time_seconds = models.PositiveIntegerField(
-        default=300,
+        default=600,
         help_text="Tempo máximo de execução em segundos (T_max)",
     )
 

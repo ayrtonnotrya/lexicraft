@@ -13,9 +13,9 @@
 #     .env da raiz do projeto para a mesma interpolação.
 #
 # Rede: os serviços se comunicam na rede bridge default do projeto. O serviço
-# `web` também ingressa numa rede externa (`nginx-proxy`, reverse proxy) para
+# `web` também ingressa numa rede externa (`web`, reverse proxy) para
 # exposição via domínio/TLS — por isso não publica porta. A rede externa deve
-# existir: docker network create nginx-proxy (nome configurável em PROXY_NETWORK).
+# existir: docker network create web.
 #
 # Uso:
 #   docker compose up --build

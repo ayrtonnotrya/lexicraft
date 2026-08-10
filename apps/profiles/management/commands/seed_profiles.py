@@ -1,6 +1,7 @@
-"""Management Command idempotente que povoa o banco com 7 Perfis de Geração
+"""Management Command idempotente que povoa o banco com 8 Perfis de Geração
 out-of-the-box (E-mail Corporativo, Carta de Amor, Ensaio Acadêmico, ... e
-Engenheiro de Prompts Sênior).
+Engenheiro de Prompts Sênior, ..., Refatoração de README.md e Lapidação
+de Análise de Estudo de Caso).
 
 Garante idempotência via ``update_or_create``/``get_or_create`` em todo o
 gráfico de objetos (ProfileConfig -> QualityAxis + SystemPrompt), de modo que
@@ -20,10 +21,11 @@ User = get_user_model()
 
 class Command(BaseCommand):
     help = (
-        "Cria (ou atualiza) 7 Perfis de Geração out-of-the-box com seus "
+        "Cria (ou atualiza) 8 Perfis de Geração out-of-the-box com seus "
         "Eixos de Qualidade e Prompts de Sistema: E-mail Corporativo, "
         "Carta de Amor, Trabalho de Escola (Ensaio Acadêmico), ... e "
-        "Engenheiro de Prompts Sênior (Meta-Prompting)."
+        "Engenheiro de Prompts Sênior (Meta-Prompting), Refatoração de "
+        "README.md e Lapidação de Análise de Estudo de Caso."
     )
 
     # ------------------------------------------------------------------ #
@@ -1191,6 +1193,204 @@ class Command(BaseCommand):
                 ),
             },
         },
+        # ================================================================ #
+        #  Perfil — Lapidação de Análise de Estudo de Caso                  #
+        # ================================================================ #
+        {
+            "name": "Lapidação de Análise de Estudo de Caso",
+            "description": (
+                "Otimiza e aprofunda rascunhos de respostas para "
+                "estudos de caso de gestão e liderança. Eleva o nível "
+                "executivo do texto, insere fundamentação teórica "
+                "precisa e refina o plano de ação mantendo as teses "
+                "originais do autor."
+            ),
+            "axes": [
+                {
+                    "name": "Fundamentação Teórica nas Respostas",
+                    "weight": 2.0,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a FUNDAMENTAÇÃO TEÓRICA nas respostas. "
+                        "Deduza pontos absolutos quando:\n"
+                        "- As respostas do rascunho permanecerem baseadas "
+                        "em senso comum ou opinião leiga após a "
+                        "lapidação, sem enriquecimento de conceitos e "
+                        "modelos teóricos consolidados (Estágios de "
+                        "Tuckman, Comunicação Não-Violenta de "
+                        "Rosenberg, Liderança Adaptativa de Heifetz, "
+                        "Feedback SCI, Liderança Situacional de "
+                        "Hersey-Blanchard, etc.);\n"
+                        "- Um modelo teórico for citado mas não "
+                        "conectado à resposta do autor (menção "
+                        "ornamental, enfeite acadêmico sem aplicação "
+                        "diagnóstica concreta);\n"
+                        "- A teoria for aplicada fora de seu escopo "
+                        "(ex.: usar Tuckman para julgar performance "
+                        "individual em vez de dinâmica de equipe);\n"
+                        "- A fundamentação distorcer ou contradizer a "
+                        "tese original do autor em vez de ancorá-la.\n"
+                        "A pontuação plena exige que cada resposta "
+                        "lapidada esteja ancorada em um modelo teórico "
+                        "pertinente, aplicado corretamente à tese do "
+                        "autor."
+                    ),
+                },
+                {
+                    "name": "Profundidade do Diagnóstico",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie a PROFUNDIDADE do diagnóstico. Deduza "
+                        "pontos absolutos quando:\n"
+                        "- O diagnóstico das respostas permanecer "
+                        "superficial, focado em sintomas ('a equipe "
+                        "está desmotivada', 'há atrito entre as "
+                        "partes') sem rastrear a causa raiz "
+                        "(liderança ausente, metas ambíguas, conflito "
+                        "não tratado, indefinição de papéis);\n"
+                        "- Não houver relações de causa e efeito "
+                        "explícitas encadeando sintoma, causa raiz e "
+                        "condicionantes sistêmicos (cultura, "
+                        "hierarquia, restrições de recursos);\n"
+                        "- A análise for monocausal, atribuindo um "
+                        "fenômeno complexo a uma única causa;\n"
+                        "- O diagnóstico for maniqueísta (certo/"
+                        "errado) sem enxergar o sistema de incentivos "
+                        "e pressões que molda os comportamentos;\n"
+                        "- As respostas não distinguirem problema "
+                        "agudo de problema crônico, confundindo "
+                        "gatilho com causa estrutural.\n"
+                        "A pontuação plena exige mapeamento de causa e "
+                        "efeito com encadeamento explícito, a "
+                        "profundar a tese original do autor."
+                    ),
+                },
+                {
+                    "name": "Pragmatismo do Plano de Ação",
+                    "weight": 1.5,
+                    "base_score": 100.0,
+                    "deduction_rules": (
+                        "Avalie o PRAGMATISMO do plano de ação. Deduza "
+                        "pontos absolutos quando:\n"
+                        "- As soluções propostas nas respostas forem "
+                        "genéricas e não-acionáveis ('melhorar a "
+                        "comunicação', 'incentivar o trabalho em "
+                        "equipe') sem ferramentas, rituais ou passos "
+                        "concretos (ex.: dailies, 1:1 estruturados, "
+                        "retrospectivas, role-play de CNV, ritual de "
+                        "Feedback SCI);\n"
+                        "- As recomendações forem irrealistas face aos "
+                        "recursos, prazos, cultura ou autoridade "
+                        "descritos no caso (pedir 'treinamento "
+                        "intensivo de meses' em plena crise de prazo);\n"
+                        "- Não houver plano de implementação mínimo, "
+                        "sequência de execução, responsáveis ou "
+                        "indicadores de acompanhamento que sustentem "
+                        "a proposta;\n"
+                        "- A solução criar novos riscos ou efeitos "
+                        "colaterais não antecipados;\n"
+                        "- O plano resolver apenas o sintoma e deixar "
+                        "a causa raiz intacta, garantindo a "
+                        "reincidência do problema.\n"
+                        "A pontuação plena exige recomendações "
+                        "operacionais, contextualizadas ao caso, com "
+                        "passos, responsáveis e métricas de verificação."
+                    ),
+                },
+                {
+                    "name": "Estrutura e Didática das Respostas",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a ESTRUTURA e a DIDÁTICA das respostas. "
+                        "Deduza pontos absolutos quando:\n"
+                        "- As respostas forem prolixas: parágrafos "
+                        "inflados por paráfrase excessiva do próprio "
+                        "enunciado, que repetem o caso em vez de "
+                        "analisá-lo;\n"
+                        "- Falta de objetividade e escaneabilidade: o "
+                        "texto poderia usar bullet points, tópicos ou "
+                        "listas numeradas para apoiar a leitura "
+                        "executiva, optando por bloco monolítico;\n"
+                        "- Falta de encadeamento lógico entre "
+                        "parágrafos (ausência de conectivos ou saltos "
+                        "temáticos que rompam o fio condutivo);\n"
+                        "- Transições abruptas entre diagnóstico e "
+                        "plano de ação, sem costura argumentativa;\n"
+                        "- Excesso de jargão gerencial vazio ('sinergia', "
+                        "'alinhamento estratégico') em lugar de análise "
+                        "concreta.\n"
+                        "A pontuação plena exige objetividade, "
+                        "escaneabilidade (bullet points, tópicos) e "
+                        "clareza dissertativa que guie o leitor do "
+                        "problema à recomendação."
+                    ),
+                },
+                {
+                    "name": "Consistência Lógica do Raciocínio",
+                    "weight": 1.0,
+                    "base_score": 80.0,
+                    "deduction_rules": (
+                        "Avalie a CONSISTÊNCIA LÓGICA do raciocínio. "
+                        "Deduza pontos absolutos quando:\n"
+                        "- Houver contradição entre o diagnóstico "
+                        "apontado em uma resposta e a solução "
+                        "recomendada (ex.: diagnostica falta de "
+                        "maturidade da equipe e propõe autogestão plena "
+                        "como remédio);\n"
+                        "- Premissas incompatíveis coexistirem no "
+                        "argumento (ex.: assume autonomia total da "
+                        "equipe e, depois, reclama de falta de "
+                        "direção);\n"
+                        "- A conclusão não decorrer das premissas "
+                        "apresentadas (salto lógico, non sequitur);\n"
+                        "- A lapidação introduzir contradição com a "
+                        "tese original do autor, rompendo a coerência "
+                        "que se pretendia preservar;\n"
+                        "- Recomendar uma ação que o próprio "
+                        "diagnóstico já havia desaconselhado.\n"
+                        "A pontuação plena exige coerência integral: "
+                        "premissas, diagnóstico e plano de ação formam "
+                        "um raciocínio contínuo, sem rupturas nem "
+                        "contradições internas, fiel à tese do autor."
+                    ),
+                },
+            ],
+            "prompts": {
+                PromptRole.WRITER: (
+                    "Você é um Editor Executivo e Consultor Sênior de "
+                    "Gestão. O <user_input> contém o RASCUNHO DE "
+                    "RESPOSTAS do usuário para um estudo de caso. Sua "
+                    "tarefa é REESCREVER e LAPIDAR essas respostas. "
+                    "Mantenha a essência do raciocínio e a posição do "
+                    "autor, mas eleve o texto para o nível de um "
+                    "relatório executivo de MBA: conecte as respostas a "
+                    "modelos teóricos de liderança/gestão, aprofunde as "
+                    "justificativas e torne o plano de ação concreto e "
+                    "estruturado."
+                ),
+                PromptRole.GUARDRAIL: (
+                    "Você é o Guard-rail de Fidelidade da Análise. Sua "
+                    "função é verificar se a reescrita feita pelo "
+                    "Redator preservou a essência das respostas do "
+                    "autor em <user_input>. REPROVE (is_approved: "
+                    "false) se o Redator alterar a conclusão do aluno, "
+                    "inventar fatos sobre a empresa que o aluno não "
+                    "mencionou, ou omitir a resposta de alguma questão "
+                    "do rascunho original."
+                ),
+                PromptRole.AUDITOR: (
+                    "Você é um avaliador de MBAs. Sua função é auditar "
+                    "a RESPOSTA LAPIDADA nos 5 eixos de qualidade. Faça "
+                    "uma varredura rigorosa e deduza pontos em escala "
+                    "absoluta caso a resposta contenha senso comum, "
+                    "falta de teoria, diagnóstico raso ou soluções "
+                    "genéricas. Exija que cada dedução cite o trecho "
+                    "exato da resposta e indique como aprofundá-lo."
+                ),
+            },
+        },
     ]
 
     # ------------------------------------------------------------------ #
@@ -1238,10 +1438,11 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                "Confirmada a criação de todos os 7 perfis do LexiCraft: "
+                "Confirmada a criação de todos os 8 perfis do LexiCraft: "
                 "E-mail Corporativo, Carta de Amor, Trabalho de Escola "
                 "(Ensaio Acadêmico), Engenheiro de Prompts Sênior/Pleno/Júnior "
-                "(Meta-Prompting) e Refatoração de README.md — todos "
+                "(Meta-Prompting), Refatoração de README.md e Lapidação de "
+                "Análise de Estudo de Caso — todos "
                 "idempotentes e prontos para uso."
             )
         )

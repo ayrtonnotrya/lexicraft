@@ -158,6 +158,11 @@ DEFAULT_MODEL_NAME = config('DEFAULT_MODEL_NAME', default='deepseek-v4-flash')
 # a capacidade de ajuste fino por ambiente.
 LLM_TEMPERATURE = config('LLM_TEMPERATURE', default=1.0, cast=float)
 
+# Caminho do artefato serializado do detector humano-vs-IA
+# (apps/orchestrator/ml). Vazio/ausente => detector inativo, pipeline segue sem
+# o eixo de naturalidade. Não hardcodar o caminho no código.
+ML_MODEL_PATH = config('ML_MODEL_PATH', default='')
+
 # Tabela estática de custos (USD por 1M de tokens) — Motor de Isocusto.
 COST_PER_1M_PROMPT_TOKENS = config('COST_PER_1M_PROMPT_TOKENS', default=0.15, cast=float)
 COST_PER_1M_COMPLETION_TOKENS = config('COST_PER_1M_COMPLETION_TOKENS', default=0.60, cast=float)

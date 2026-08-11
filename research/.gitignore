@@ -1,0 +1,23 @@
+# Artefatos binários/pesados do estudo — nunca versionar no git.
+# A "receita" (código, notebooks e MANIFEST.md) é o que deve ser versionado.
+# Os padrões abaixo são relativos a esta pasta (research/).
+
+# Datasets baixados do Hugging Face
+data/raw/
+
+# Features derivadas / parquets intermediários
+data/processed/
+
+# Modelos serializados (*.joblib / *.pkl)
+models/*.joblib
+models/*.pkl
+models/*.joblib.gz
+models/*.pkl.gz
+models/*.onnx
+
+# Relatórios de avaliação, curvas e checkpoints
+report/
+models/checkpoints/
+
+# Notebooks com saída pesada/embutida (dados de treino dentro das células)
+notebooks/*_outputs.ipynb

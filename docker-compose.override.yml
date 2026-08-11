@@ -15,6 +15,7 @@
 #      mudança salva no disco o servidor reinicia sozinho.
 #   3. Expõe a porta 8000 direto para localhost.
 #   4. Aplica --autoreload no worker/beat do Celery.
+#   5. Adiciona um serviço `jupyter` (dev-only) para o estudo de ML humano-vs-IA.
 # ---------------------------------------------------------------------------
 
 services:
@@ -36,3 +37,23 @@ services:
   beat:
     volumes:
       - ./:/app
+
+  # Estudo de ML humano-vs-IA (dev-only). Sobe o Jupyter Lab com as mesmas deps
+  # do projeto (bind mount ./:/app) + as libs de pesquisa em requirements-ml.txt.
+  # Acesso em http://localhost:8888. Os notebooks IMPORTAM
+  # apps.orchestrator.ml.features para evitar desvio treino/produção.
+  jupyter:
+    build: .
+    # Sobrescreve o entrypoint.sh (que espera o Postgres). O estudo de ML não
+    # precisa do banco — os notebooks só operam sobre texto e features.
+    # Token vazio para acesso local sem senha (dev-only, bind a localhost).
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "pip install -r /app/research/requirements-ml.txt &&
+       jupyter lab --config=/app/research/jupyter_server_config.py"
+    volumes:
+      - ./:/app
+    ports:
+      - "8888:8888"
+    networks:
+      - default

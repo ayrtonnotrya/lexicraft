@@ -1,0 +1,19 @@
+# Dependências EXCLUSIVAS do estudo de ML (Jupyter + treinamento).
+# Mantidas fora do requirements.txt de produção para não inflar a imagem de
+# runtime (o pipeline só precisa de joblib/numpy em inference time).
+#
+# Instalar no serviço jupyter (docker-compose.override.yml) ou em um venv local.
+
+jupyterlab>=4.0,<5.0
+
+# Dataset e manipulação
+datasets>=2.19
+pandas>=2.2
+numpy>=1.26
+
+# Treinamento / avaliação
+scikit-learn>=1.4
+matplotlib>=3.8
+
+# Serialização de modelo (compartilhado com produção)
+joblib>=1.4
